@@ -1,22 +1,27 @@
 (function () {
     'use strict';
 
-    // === Constants ===
-    const STATE_KEY = 'melucafeeder_state';
-    const SETTINGS_KEY = 'melucafeeder_settings';
-    const HISTORY_KEY = 'melucafeeder_history';
-    const PENDING_KEY = 'melucafeeder_pending';
+    // === Firebase Config ===
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
+        authDomain: "melucafeeder.firebaseapp.com",
+        databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "melucafeeder",
+        storageBucket: "melucafeeder.firebasestorage.app",
+        messagingSenderId: "314126208675",
+        appId: "1:314126208675:web:424edf29c499aa168db916"
+    };
 
+    // === Constants ===
+    const SETTINGS_KEY = 'melucafeeder_settings';
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
 
-    const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxTYYxFvjZYOyRunR8HaBFKwwHwm_GTxA3OusgB-Kp35M8md_toDosJgcea-rS0aeINxQ/exec';
-
-    let state = loadState();
+    let state = { stock: 0, lastProcessed: 0 };
     let settings = loadSettings();
-    let history = loadHistory();
-    let pendingEntries = loadPending();
-    let syncing = false;
+    let history = [];
+    let db = null;
+    let firstLoad = true;
 
     // === DOM Elements ===
     const stockCountEl = document.getElementById('stockCount');
@@ -33,165 +38,98 @@
     const syncStatusEl = document.getElementById('syncStatus');
 
     // === Initialization ===
-    async function init() {
+    function init() {
         render();
         bindEvents();
         scheduleNextCheck();
+        initFirebase();
+    }
 
-        if (settings.sheetsUrl) {
-            await syncFromCloud();
+    function initFirebase() {
+        if (FIREBASE_CONFIG.apiKey === 'PLACEHOLDER') {
+            updateSyncStatus('offline');
+            return;
         }
 
-        processAutoDeductions();
-        render();
-    }
-
-    // === LocalStorage ===
-    function loadState() {
         try {
-            const raw = localStorage.getItem(STATE_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) { /* ignore */ }
-        return { stock: 0, lastProcessed: 0 };
+            firebase.initializeApp(FIREBASE_CONFIG);
+            db = firebase.database();
+            updateSyncStatus('syncing');
+
+            // Listen for state changes in real-time
+            db.ref('state').on('value', function (snapshot) {
+                const cloudState = snapshot.val();
+                if (cloudState) {
+                    state.stock = cloudState.stock || 0;
+                    state.lastProcessed = cloudState.lastProcessed || 0;
+
+                    // Only process deductions on first load
+                    if (firstLoad) {
+                        firstLoad = false;
+                        processAutoDeductions();
+                    }
+
+                    render();
+                    updateSyncStatus('synced');
+                } else {
+                    firstLoad = false;
+                    updateSyncStatus('synced');
+                }
+            });
+
+            // Listen for history changes
+            db.ref('history').orderByChild('date').limitToLast(30).on('value', function (snapshot) {
+                const data = snapshot.val();
+                if (data) {
+                    history = Object.values(data).sort(function (a, b) {
+                        return new Date(b.date) - new Date(a.date);
+                    });
+                    renderHistory();
+                }
+            });
+        } catch (e) {
+            console.error('Firebase init error:', e);
+            updateSyncStatus('error');
+        }
     }
 
-    function saveState() {
-        localStorage.setItem(STATE_KEY, JSON.stringify(state));
-        syncToCloud();
-    }
-
+    // === Settings ===
     function loadSettings() {
         try {
             const raw = localStorage.getItem(SETTINGS_KEY);
-            if (raw) {
-                const s = JSON.parse(raw);
-                if (!s.sheetsUrl) s.sheetsUrl = DEFAULT_SHEETS_URL;
-                return s;
-            }
-        } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: DEFAULT_SHEETS_URL };
-    }
-
-    function loadHistory() {
-        try {
-            const raw = localStorage.getItem(HISTORY_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return [];
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '' };
     }
 
-    function saveHistory() {
-        if (history.length > 50) history = history.slice(0, 50);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    }
-
-    function loadPending() {
-        try {
-            const raw = localStorage.getItem(PENDING_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) { /* ignore */ }
-        return [];
-    }
-
-    function savePending() {
-        localStorage.setItem(PENDING_KEY, JSON.stringify(pendingEntries));
-    }
-
-    // === Google Sheets Sync ===
-    async function syncToCloud() {
-        if (!settings.sheetsUrl || syncing) return;
-
-        syncing = true;
-        updateSyncStatus('syncing');
-
-        try {
-            // Use GET with encoded data to avoid CORS/redirect issues with POST
-            const payload = {
-                action: 'sync',
+    // === Firebase Write ===
+    function saveState() {
+        if (db) {
+            db.ref('state').set({
                 stock: state.stock,
-                lastProcessed: state.lastProcessed,
-                newEntries: pendingEntries
-            };
-
-            const params = new URLSearchParams({
-                action: 'sync',
-                data: JSON.stringify(payload)
+                lastProcessed: state.lastProcessed
             });
-
-            const response = await fetch(settings.sheetsUrl + '?' + params.toString());
-
-            if (response.ok) {
-                pendingEntries = [];
-                savePending();
-                updateSyncStatus('synced');
-            } else {
-                updateSyncStatus('error');
-            }
-        } catch (e) {
-            console.error('Sync error:', e);
-            updateSyncStatus('error');
-        }
-
-        syncing = false;
-    }
-
-    async function syncFromCloud() {
-        if (!settings.sheetsUrl) return;
-
-        updateSyncStatus('syncing');
-
-        try {
-            const response = await fetch(settings.sheetsUrl + '?action=getState');
-            if (!response.ok) {
-                updateSyncStatus('error');
-                return;
-            }
-
-            const cloudState = await response.json();
-
-            if (cloudState.lastProcessed && cloudState.lastProcessed >= state.lastProcessed) {
-                state.stock = cloudState.stock;
-                state.lastProcessed = cloudState.lastProcessed;
-                localStorage.setItem(STATE_KEY, JSON.stringify(state));
-                processAutoDeductions();
-                render();
-            }
-
-            const histResponse = await fetch(settings.sheetsUrl + '?action=getHistory');
-            if (histResponse.ok) {
-                const cloudHistory = await histResponse.json();
-                if (cloudHistory.history && cloudHistory.history.length > 0) {
-                    history = cloudHistory.history;
-                    saveHistory();
-                    renderHistory();
-                }
-            }
-
-            if (pendingEntries.length > 0) {
-                await syncToCloud();
-            }
-
-            updateSyncStatus('synced');
-        } catch (e) {
-            console.error('Sync from cloud error:', e);
-            updateSyncStatus('error');
         }
     }
 
-    function updateSyncStatus(status) {
-        if (!syncStatusEl) return;
-        syncStatusEl.className = 'sync-status ' + status;
-        const labels = {
-            syncing: '⟳ A sincronizar...',
-            synced: '✓ Sincronizado',
-            error: '✗ Erro de sync',
-            offline: '○ Apenas local'
+    function addHistoryEntry(type, quantity, description) {
+        const entry = {
+            type: type,
+            quantity: quantity,
+            description: description,
+            date: new Date().toISOString()
         };
-        syncStatusEl.textContent = labels[status] || '';
+        history.unshift(entry);
+
+        if (db) {
+            db.ref('history').push(entry);
+        }
     }
 
     // === Auto Deduction Logic ===
     function processAutoDeductions() {
+        if (state.lastProcessed === 0) return;
+
         const now = new Date();
         const lastProcessed = new Date(state.lastProcessed);
         let deducted = 0;
@@ -208,12 +146,14 @@
         }
 
         if (deducted > 0) {
-            addHistoryEntry('auto', -deducted, `Dedução automática (${deducted} refeições)`);
+            addHistoryEntry('auto', -deducted, 'Dedução automática (' + deducted + ' refeições)');
+            state.lastProcessed = now.getTime();
+            saveState();
             checkAlert();
+        } else {
+            state.lastProcessed = now.getTime();
+            saveState();
         }
-
-        state.lastProcessed = now.getTime();
-        localStorage.setItem(STATE_KEY, JSON.stringify(state));
     }
 
     function getNextMealTime(fromDate) {
@@ -226,12 +166,10 @@
         } else if (hour < EVENING_HOUR) {
             result.setHours(EVENING_HOUR, 0, 0, 0);
         } else {
-            // Next day morning
             result.setDate(result.getDate() + 1);
             result.setHours(MORNING_HOUR, 0, 0, 0);
         }
 
-        // If the result is the same as input (edge case at exact meal time), advance
         if (result.getTime() <= fromDate.getTime()) {
             if (result.getHours() === MORNING_HOUR) {
                 result.setHours(EVENING_HOUR, 0, 0, 0);
@@ -246,7 +184,6 @@
 
     function getNextMealTimes() {
         const now = new Date();
-        const nextMeal = getNextMealTime(now);
         const morningToday = new Date(now);
         morningToday.setHours(MORNING_HOUR, 0, 0, 0);
         const eveningToday = new Date(now);
@@ -272,19 +209,15 @@
             nextEvening = tomorrow;
         }
 
-        return { nextMorning, nextEvening };
+        return { nextMorning: nextMorning, nextEvening: nextEvening };
     }
 
     // === Alert / Notification ===
     function checkAlert() {
         if (state.stock <= settings.alertThreshold && state.stock > 0) {
-            sendNotification(
-                `⚠️ MelucaFeeder: Stock baixo! Restam apenas ${state.stock} refeições.`
-            );
+            sendNotification('⚠️ MelucaFeeder: Stock baixo! Restam apenas ' + state.stock + ' refeições.');
         } else if (state.stock === 0) {
-            sendNotification(
-                `🚨 MelucaFeeder: Sem refeições em stock! A Meluca precisa de comida!`
-            );
+            sendNotification('🚨 MelucaFeeder: Sem refeições em stock! A Meluca precisa de comida!');
         }
     }
 
@@ -295,7 +228,7 @@
         }
 
         try {
-            const url = `https://api.telegram.org/bot${settings.telegramToken}/sendMessage`;
+            const url = 'https://api.telegram.org/bot' + settings.telegramToken + '/sendMessage';
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -307,32 +240,14 @@
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                console.error('Telegram API error:', err);
-                showToast('Erro ao enviar notificação');
+                console.error('Telegram API error:', await response.json());
                 return false;
             }
             return true;
         } catch (e) {
             console.error('Notification error:', e);
-            showToast('Erro de ligação ao Telegram');
             return false;
         }
-    }
-
-    // === History ===
-    function addHistoryEntry(type, quantity, description) {
-        const entry = {
-            type,
-            quantity,
-            description,
-            date: new Date().toISOString()
-        };
-        history.unshift(entry);
-        saveHistory();
-
-        pendingEntries.push(entry);
-        savePending();
     }
 
     // === Render ===
@@ -347,24 +262,22 @@
             stockStatusEl.classList.add('danger');
         } else if (state.stock <= settings.alertThreshold) {
             stockCountEl.classList.add('warning');
-            stockStatusEl.textContent = `Stock baixo (alerta: ${settings.alertThreshold})`;
+            stockStatusEl.textContent = 'Stock baixo (alerta: ' + settings.alertThreshold + ')';
             stockStatusEl.classList.add('warning');
         } else {
             const days = Math.floor(state.stock / 2);
-            stockStatusEl.textContent = `≈ ${days} dias de autonomia`;
+            stockStatusEl.textContent = '≈ ' + days + ' dias de autonomia';
             stockStatusEl.style.color = '';
         }
 
-        const { nextMorning, nextEvening } = getNextMealTimes();
-        nextMorningEl.textContent = formatRelativeTime(nextMorning);
-        nextEveningEl.textContent = formatRelativeTime(nextEvening);
+        const meals = getNextMealTimes();
+        nextMorningEl.textContent = formatRelativeTime(meals.nextMorning);
+        nextEveningEl.textContent = formatRelativeTime(meals.nextEvening);
 
         renderHistory();
 
-        lastUpdateEl.textContent = formatDateTime(new Date(state.lastProcessed));
-
-        if (!settings.sheetsUrl) {
-            updateSyncStatus('offline');
+        if (state.lastProcessed > 0) {
+            lastUpdateEl.textContent = formatDateTime(new Date(state.lastProcessed));
         }
     }
 
@@ -374,17 +287,27 @@
             return;
         }
 
-        historyListEl.innerHTML = history.slice(0, 20).map(entry => {
+        historyListEl.innerHTML = history.slice(0, 20).map(function (entry) {
             const typeClass = entry.quantity > 0 ? 'add' : 'deduct';
             const sign = entry.quantity > 0 ? '+' : '';
-            return `
-                <div class="history-item">
-                    <span class="type ${typeClass}">${sign}${entry.quantity}</span>
-                    <span>${escapeHtml(entry.description)}</span>
-                    <span class="date">${formatDateTime(new Date(entry.date))}</span>
-                </div>
-            `;
+            return '<div class="history-item">' +
+                '<span class="type ' + typeClass + '">' + sign + entry.quantity + '</span>' +
+                '<span>' + escapeHtml(entry.description) + '</span>' +
+                '<span class="date">' + formatDateTime(new Date(entry.date)) + '</span>' +
+                '</div>';
         }).join('');
+    }
+
+    function updateSyncStatus(status) {
+        if (!syncStatusEl) return;
+        syncStatusEl.className = 'sync-status ' + status;
+        const labels = {
+            syncing: '⟳ A sincronizar...',
+            synced: '✓ Sincronizado',
+            error: '✗ Erro de sync',
+            offline: '○ Apenas local'
+        };
+        syncStatusEl.textContent = labels[status] || '';
     }
 
     // === Events ===
@@ -407,10 +330,10 @@
         state.stock += qty;
         state.lastProcessed = Date.now();
         saveState();
-        addHistoryEntry('production', qty, `Produção: +${qty} refeições`);
+        addHistoryEntry('production', qty, 'Produção: +' + qty + ' refeições');
         addQuantityEl.value = '1';
         render();
-        showToast(`+${qty} refeições adicionadas`);
+        showToast('+' + qty + ' refeições adicionadas');
     }
 
     function handleManualDeduct() {
@@ -443,7 +366,6 @@
             processAutoDeductions();
             if (state.stock !== previousStock) {
                 render();
-                syncToCloud();
             }
         }, 60000);
     }
@@ -456,9 +378,9 @@
         const minutes = Math.floor((diff % 3600000) / 60000);
 
         if (hours > 0) {
-            return `em ${hours}h ${minutes}min`;
+            return 'em ' + hours + 'h ' + minutes + 'min';
         }
-        return `em ${minutes}min`;
+        return 'em ' + minutes + 'min';
     }
 
     function formatDateTime(date) {
@@ -466,7 +388,7 @@
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${day}/${month} ${hours}:${minutes}`;
+        return day + '/' + month + ' ' + hours + ':' + minutes;
     }
 
     function escapeHtml(str) {

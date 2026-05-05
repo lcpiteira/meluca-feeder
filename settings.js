@@ -17,7 +17,6 @@
     const testNotificationBtn = document.getElementById('testNotification');
     const toastEl = document.getElementById('toast');
 
-    const sheetsUrlEl = document.getElementById('sheetsUrl');
     const alertThresholdEl = document.getElementById('alertThreshold');
     const telegramTokenEl = document.getElementById('telegramToken');
     const telegramChatIdEl = document.getElementById('telegramChatId');
@@ -30,8 +29,7 @@
         return {
             alertThreshold: 5,
             telegramToken: '',
-            telegramChatId: '',
-            sheetsUrl: 'https://script.google.com/macros/s/AKfycbxTYYxFvjZYOyRunR8HaBFKwwHwm_GTxA3OusgB-Kp35M8md_toDosJgcea-rS0aeINxQ/exec'
+            telegramChatId: ''
         };
     }
 
@@ -73,7 +71,6 @@
         actionsPanel.style.display = '';
 
         const settings = loadSettings();
-        sheetsUrlEl.value = settings.sheetsUrl || '';
         alertThresholdEl.value = settings.alertThreshold || 5;
         telegramTokenEl.value = settings.telegramToken || '';
         telegramChatIdEl.value = settings.telegramChatId || '';
@@ -81,7 +78,6 @@
 
     function handleSave() {
         const settings = loadSettings();
-        settings.sheetsUrl = sheetsUrlEl.value.trim();
         settings.alertThreshold = parseInt(alertThresholdEl.value, 10) || 5;
         settings.telegramToken = telegramTokenEl.value.trim();
         settings.telegramChatId = telegramChatIdEl.value.trim();

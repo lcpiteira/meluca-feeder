@@ -32,12 +32,11 @@
 
         <!-- Settings (hidden until authenticated) -->
         <section class="settings-section" id="settingsPanel" style="display: none;">
-            <h2>Persistência (Google Sheets)</h2>
+            <h2>Persistência (Firebase)</h2>
             <div class="settings-form">
-                <div class="setting-group">
-                    <label>Google Apps Script URL:</label>
-                    <input type="text" id="sheetsUrl" placeholder="https://script.google.com/macros/s/.../exec">
-                </div>
+                <p class="settings-help">
+                    A persistência usa Firebase Realtime Database. A configuração está directamente no código (app.js).
+                </p>
             </div>
         </section>
 
