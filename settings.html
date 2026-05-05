@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MelucaFeeder - Configurações</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>⚙️ Configurações</h1>
+            <p class="subtitle">Acesso restrito</p>
+        </header>
+
+        <!-- Login -->
+        <section class="login-section" id="loginSection">
+            <div class="login-form">
+                <div class="setting-group">
+                    <label>Utilizador:</label>
+                    <input type="text" id="loginUser" placeholder="utilizador" autocomplete="off">
+                </div>
+                <div class="setting-group">
+                    <label>Password:</label>
+                    <input type="password" id="loginPass" placeholder="password">
+                </div>
+                <button id="loginBtn" class="btn btn-primary">Entrar</button>
+                <p class="login-error" id="loginError"></p>
+            </div>
+        </section>
+
+        <!-- Settings (hidden until authenticated) -->
+        <section class="settings-section" id="settingsPanel" style="display: none;">
+            <h2>Persistência (Google Sheets)</h2>
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Google Apps Script URL:</label>
+                    <input type="text" id="sheetsUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+            </div>
+        </section>
+
+        <section class="settings-section" id="alertPanel" style="display: none;">
+            <h2>Alertas</h2>
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Alerta quando stock atingir:</label>
+                    <input type="number" id="alertThreshold" min="1" value="5">
+                    <span>refeições</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="settings-section" id="telegramPanel" style="display: none;">
+            <h2>Notificações (Telegram)</h2>
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Telegram Bot Token:</label>
+                    <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
+                </div>
+                <div class="setting-group">
+                    <label>Telegram Chat ID:</label>
+                    <input type="text" id="telegramChatId" placeholder="-1001234567890">
+                </div>
+                <div class="setting-group">
+                    <button id="testNotification" class="btn btn-small">Testar Notificação</button>
+                </div>
+                <p class="settings-help">
+                    Cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
+                    obtém o token, e envia uma mensagem ao bot. Depois usa 
+                    <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
+                    para descobrir o teu Chat ID.
+                </p>
+            </div>
+        </section>
+
+        <section id="actionsPanel" style="display: none;">
+            <div class="setting-group">
+                <button id="saveSettings" class="btn btn-primary">Guardar Configurações</button>
+                <a href="index.html" class="btn btn-secondary">← Voltar</a>
+            </div>
+        </section>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

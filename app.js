@@ -28,15 +28,9 @@
     const manualDeductEl = document.getElementById('manualDeduct');
     const manualAddEl = document.getElementById('manualAdd');
     const historyListEl = document.getElementById('historyList');
-    const alertThresholdEl = document.getElementById('alertThreshold');
-    const telegramTokenEl = document.getElementById('telegramToken');
-    const telegramChatIdEl = document.getElementById('telegramChatId');
-    const testNotificationEl = document.getElementById('testNotification');
-    const saveSettingsEl = document.getElementById('saveSettings');
     const lastUpdateEl = document.getElementById('lastUpdate');
     const toastEl = document.getElementById('toast');
     const syncStatusEl = document.getElementById('syncStatus');
-    const sheetsUrlEl = document.getElementById('sheetsUrl');
 
     // === Initialization ===
     async function init() {
@@ -72,10 +66,6 @@
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
         return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: DEFAULT_SHEETS_URL };
-    }
-
-    function saveSettingsToStorage() {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     }
 
     function loadHistory() {
@@ -365,11 +355,6 @@
 
         renderHistory();
 
-        alertThresholdEl.value = settings.alertThreshold;
-        telegramTokenEl.value = settings.telegramToken;
-        telegramChatIdEl.value = settings.telegramChatId;
-        if (sheetsUrlEl) sheetsUrlEl.value = settings.sheetsUrl;
-
         lastUpdateEl.textContent = formatDateTime(new Date(state.lastProcessed));
 
         if (!settings.sheetsUrl) {
@@ -404,8 +389,6 @@
         });
         manualDeductEl.addEventListener('click', handleManualDeduct);
         manualAddEl.addEventListener('click', handleManualAdd);
-        saveSettingsEl.addEventListener('click', handleSaveSettings);
-        testNotificationEl.addEventListener('click', handleTestNotification);
     }
 
     function handleAdd() {
@@ -445,35 +428,6 @@
         addHistoryEntry('manual', 1, 'Adição manual');
         render();
         showToast('1 refeição adicionada');
-    }
-
-    function handleSaveSettings() {
-        settings.alertThreshold = parseInt(alertThresholdEl.value, 10) || 5;
-        settings.telegramToken = telegramTokenEl.value.trim();
-        settings.telegramChatId = telegramChatIdEl.value.trim();
-        settings.sheetsUrl = sheetsUrlEl ? sheetsUrlEl.value.trim() : '';
-        saveSettingsToStorage();
-        render();
-        showToast('Configurações guardadas');
-
-        if (settings.sheetsUrl) {
-            syncFromCloud();
-        }
-    }
-
-    async function handleTestNotification() {
-        settings.telegramToken = telegramTokenEl.value.trim();
-        settings.telegramChatId = telegramChatIdEl.value.trim();
-
-        if (!settings.telegramToken || !settings.telegramChatId) {
-            showToast('Configura o Telegram primeiro');
-            return;
-        }
-
-        const success = await sendNotification('🧪 Teste MelucaFeeder: Notificações a funcionar!');
-        if (success) {
-            showToast('Notificação enviada com sucesso!');
-        }
     }
 
     // === Schedule ===
