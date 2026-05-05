@@ -10,6 +10,8 @@
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
 
+    const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxzpUXd4Khz38ui0kDv3XD_1l_Lp__tjsETUihvXRuG-J1gDqSZQe3ULGmBOHmML98QzQ/exec';
+
     let state = loadState();
     let settings = loadSettings();
     let history = loadHistory();
@@ -38,7 +40,6 @@
 
     // === Initialization ===
     async function init() {
-        processAutoDeductions();
         render();
         bindEvents();
         scheduleNextCheck();
@@ -46,6 +47,9 @@
         if (settings.sheetsUrl) {
             await syncFromCloud();
         }
+
+        processAutoDeductions();
+        render();
     }
 
     // === LocalStorage ===
@@ -67,7 +71,7 @@
             const raw = localStorage.getItem(SETTINGS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: '' };
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: DEFAULT_SHEETS_URL };
     }
 
     function saveSettingsToStorage() {
