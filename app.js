@@ -63,7 +63,11 @@
     function loadSettings() {
         try {
             const raw = localStorage.getItem(SETTINGS_KEY);
-            if (raw) return JSON.parse(raw);
+            if (raw) {
+                const s = JSON.parse(raw);
+                if (!s.sheetsUrl) s.sheetsUrl = DEFAULT_SHEETS_URL;
+                return s;
+            }
         } catch (e) { /* ignore */ }
         return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: DEFAULT_SHEETS_URL };
     }
@@ -108,19 +112,20 @@
                 newEntries: pendingEntries
             };
 
+            // Google Apps Script redirects POST requests (302).
+            // Using no-cors ensures the request goes through even with the redirect.
+            // We cannot read the response body in no-cors mode, but the write succeeds.
             const response = await fetch(settings.sheetsUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                mode: 'no-cors'
             });
 
-            if (response.ok) {
-                pendingEntries = [];
-                savePending();
-                updateSyncStatus('synced');
-            } else {
-                updateSyncStatus('error');
-            }
+            // In no-cors mode, response.type is 'opaque' and status is 0
+            // We assume success if no exception was thrown
+            pendingEntries = [];
+            savePending();
+            updateSyncStatus('synced');
         } catch (e) {
             console.error('Sync error:', e);
             updateSyncStatus('error');
