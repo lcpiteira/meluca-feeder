@@ -57,6 +57,38 @@
                 </div>
             </section>
 
+            <section class="calculator-section">
+                <h2>Calculadora de Ingredientes</h2>
+                <div class="calc-ingredients">
+                    <div class="calc-row">
+                        <span class="calc-icon">🍗</span>
+                        <label>Frango (g)</label>
+                        <input type="number" id="calcChicken" min="0" value="0" class="calc-input">
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-icon">🍚</span>
+                        <label>Arroz (g)</label>
+                        <input type="number" id="calcRice" min="0" value="0" class="calc-input">
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-icon">🫛</span>
+                        <label>Ervilhas (g)</label>
+                        <input type="number" id="calcPeas" min="0" value="0" class="calc-input">
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-icon">🥚</span>
+                        <label>Ovos (un)</label>
+                        <input type="number" id="calcEggs" min="0" value="0" step="1" class="calc-input">
+                    </div>
+                </div>
+                <button id="calcBtn" class="btn btn-primary calc-btn">Calcular Refeições</button>
+                <div class="calc-result" id="calcResult" style="display: none;">
+                    <span class="calc-result-number" id="calcResultNumber">0</span>
+                    <span class="calc-result-label">refeições possíveis</span>
+                    <p class="calc-result-detail" id="calcResultDetail"></p>
+                </div>
+            </section>
+
             <section class="history-section">
                 <h2>Histórico</h2>
                 <div class="history-list" id="historyList">

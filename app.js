@@ -36,6 +36,14 @@
     const lastUpdateEl = document.getElementById('lastUpdate');
     const toastEl = document.getElementById('toast');
     const syncStatusEl = document.getElementById('syncStatus');
+    const calcChickenEl = document.getElementById('calcChicken');
+    const calcRiceEl = document.getElementById('calcRice');
+    const calcPeasEl = document.getElementById('calcPeas');
+    const calcEggsEl = document.getElementById('calcEggs');
+    const calcBtnEl = document.getElementById('calcBtn');
+    const calcResultEl = document.getElementById('calcResult');
+    const calcResultNumberEl = document.getElementById('calcResultNumber');
+    const calcResultDetailEl = document.getElementById('calcResultDetail');
 
     // === Initialization ===
     function init() {
@@ -102,7 +110,7 @@
             const raw = localStorage.getItem(SETTINGS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '' };
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
     }
 
     function loadSettingsFromFirebase() {
@@ -332,6 +340,55 @@
         });
         manualDeductEl.addEventListener('click', handleManualDeduct);
         manualAddEl.addEventListener('click', handleManualAdd);
+        calcBtnEl.addEventListener('click', handleCalculate);
+    }
+
+    function handleCalculate() {
+        const recipe = settings.recipe || {
+            chicken: 50,
+            rice: 50,
+            peas: 25,
+            egg: 0.5
+        };
+
+        const chicken = parseFloat(calcChickenEl.value) || 0;
+        const rice = parseFloat(calcRiceEl.value) || 0;
+        const peas = parseFloat(calcPeasEl.value) || 0;
+        const eggs = parseFloat(calcEggsEl.value) || 0;
+
+        const meals = [];
+        const details = [];
+
+        if (recipe.chicken > 0 && chicken > 0) {
+            const m = Math.floor(chicken / recipe.chicken);
+            meals.push(m);
+            details.push('Frango: ' + m + ' refeições (' + recipe.chicken + 'g/ref)');
+        }
+        if (recipe.rice > 0 && rice > 0) {
+            const m = Math.floor(rice / recipe.rice);
+            meals.push(m);
+            details.push('Arroz: ' + m + ' refeições (' + recipe.rice + 'g/ref)');
+        }
+        if (recipe.peas > 0 && peas > 0) {
+            const m = Math.floor(peas / recipe.peas);
+            meals.push(m);
+            details.push('Ervilhas: ' + m + ' refeições (' + recipe.peas + 'g/ref)');
+        }
+        if (recipe.egg > 0 && eggs > 0) {
+            const m = Math.floor(eggs / recipe.egg);
+            meals.push(m);
+            details.push('Ovos: ' + m + ' refeições (' + recipe.egg + ' un/ref)');
+        }
+
+        if (meals.length === 0) {
+            showToast('Introduz pelo menos um ingrediente');
+            return;
+        }
+
+        const minMeals = Math.min.apply(null, meals);
+        calcResultNumberEl.textContent = minMeals;
+        calcResultDetailEl.innerHTML = details.join('<br>');
+        calcResultEl.style.display = '';
     }
 
     function handleAdd() {

@@ -28,6 +28,7 @@
     const settingsPanel = document.getElementById('settingsPanel');
     const alertPanel = document.getElementById('alertPanel');
     const telegramPanel = document.getElementById('telegramPanel');
+    const recipePanel = document.getElementById('recipePanel');
     const actionsPanel = document.getElementById('actionsPanel');
     const loginBtn = document.getElementById('loginBtn');
     const loginUser = document.getElementById('loginUser');
@@ -40,6 +41,10 @@
     const alertThresholdEl = document.getElementById('alertThreshold');
     const telegramTokenEl = document.getElementById('telegramToken');
     const telegramChatIdEl = document.getElementById('telegramChatId');
+    const recipeChickenEl = document.getElementById('recipeChicken');
+    const recipeRiceEl = document.getElementById('recipeRice');
+    const recipePeasEl = document.getElementById('recipePeas');
+    const recipeEggEl = document.getElementById('recipeEgg');
 
     function loadSettings() {
         try {
@@ -49,7 +54,8 @@
         return {
             alertThreshold: 5,
             telegramToken: '',
-            telegramChatId: ''
+            telegramChatId: '',
+            recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 }
         };
     }
 
@@ -88,29 +94,42 @@
         settingsPanel.style.display = '';
         alertPanel.style.display = '';
         telegramPanel.style.display = '';
+        recipePanel.style.display = '';
         actionsPanel.style.display = '';
 
         // Load from Firebase first, fallback to localStorage
         if (db) {
             db.ref('settings').once('value', function (snapshot) {
                 const s = snapshot.val() || loadSettings();
-                alertThresholdEl.value = s.alertThreshold || 5;
-                telegramTokenEl.value = s.telegramToken || '';
-                telegramChatIdEl.value = s.telegramChatId || '';
+                populateFields(s);
             });
         } else {
-            const s = loadSettings();
-            alertThresholdEl.value = s.alertThreshold || 5;
-            telegramTokenEl.value = s.telegramToken || '';
-            telegramChatIdEl.value = s.telegramChatId || '';
+            populateFields(loadSettings());
         }
+    }
+
+    function populateFields(s) {
+        alertThresholdEl.value = s.alertThreshold || 5;
+        telegramTokenEl.value = s.telegramToken || '';
+        telegramChatIdEl.value = s.telegramChatId || '';
+        const recipe = s.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
+        recipeChickenEl.value = recipe.chicken;
+        recipeRiceEl.value = recipe.rice;
+        recipePeasEl.value = recipe.peas;
+        recipeEggEl.value = recipe.egg;
     }
 
     function handleSave() {
         const settings = {
             alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
             telegramToken: telegramTokenEl.value.trim(),
-            telegramChatId: telegramChatIdEl.value.trim()
+            telegramChatId: telegramChatIdEl.value.trim(),
+            recipe: {
+                chicken: parseFloat(recipeChickenEl.value) || 0,
+                rice: parseFloat(recipeRiceEl.value) || 0,
+                peas: parseFloat(recipePeasEl.value) || 0,
+                egg: parseFloat(recipeEggEl.value) || 0
+            }
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
