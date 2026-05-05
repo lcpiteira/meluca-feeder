@@ -64,6 +64,10 @@
                 <h2>⚙️ Configurações</h2>
                 <div class="settings-form">
                     <div class="setting-group">
+                        <label>Google Apps Script URL:</label>
+                        <input type="text" id="sheetsUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                    </div>
+                    <div class="setting-group">
                         <label>Alerta quando stock atingir:</label>
                         <input type="number" id="alertThreshold" min="1" value="5">
                         <span>refeições</span>
@@ -81,7 +85,9 @@
                         <button id="saveSettings" class="btn btn-primary btn-small">Guardar</button>
                     </div>
                     <p class="settings-help">
-                        Para configurar o Telegram: cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
+                        <strong>Google Sheets:</strong> Segue as instruções no ficheiro 
+                        <code>google-apps-script.js</code> para configurar a persistência na cloud.<br><br>
+                        <strong>Telegram:</strong> Cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
                         obtém o token, e envia uma mensagem ao bot. Depois usa 
                         <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
                         para descobrir o teu Chat ID.
@@ -91,6 +97,7 @@
         </main>
 
         <footer>
+            <span class="sync-status" id="syncStatus">○ Apenas local</span>
             <p>MelucaFeeder &mdash; Última actualização: <span id="lastUpdate">--</span></p>
         </footer>
     </div>

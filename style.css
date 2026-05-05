@@ -321,6 +321,29 @@ footer {
     color: var(--text-light);
 }
 
+.sync-status {
+    display: block;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.sync-status.synced {
+    color: var(--success);
+}
+
+.sync-status.syncing {
+    color: var(--primary);
+}
+
+.sync-status.error {
+    color: var(--danger);
+}
+
+.sync-status.offline {
+    color: var(--text-light);
+}
+
 /* Responsive */
 @media (max-width: 360px) {
     .stock-number {

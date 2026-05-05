@@ -1,10 +1,11 @@
 (function () {
     'use strict';
 
-    // === State ===
+    // === Constants ===
     const STATE_KEY = 'melucafeeder_state';
     const SETTINGS_KEY = 'melucafeeder_settings';
     const HISTORY_KEY = 'melucafeeder_history';
+    const PENDING_KEY = 'melucafeeder_pending';
 
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
@@ -12,6 +13,8 @@
     let state = loadState();
     let settings = loadSettings();
     let history = loadHistory();
+    let pendingEntries = loadPending();
+    let syncing = false;
 
     // === DOM Elements ===
     const stockCountEl = document.getElementById('stockCount');
@@ -30,16 +33,22 @@
     const saveSettingsEl = document.getElementById('saveSettings');
     const lastUpdateEl = document.getElementById('lastUpdate');
     const toastEl = document.getElementById('toast');
+    const syncStatusEl = document.getElementById('syncStatus');
+    const sheetsUrlEl = document.getElementById('sheetsUrl');
 
     // === Initialization ===
-    function init() {
+    async function init() {
         processAutoDeductions();
         render();
         bindEvents();
         scheduleNextCheck();
+
+        if (settings.sheetsUrl) {
+            await syncFromCloud();
+        }
     }
 
-    // === Storage ===
+    // === LocalStorage ===
     function loadState() {
         try {
             const raw = localStorage.getItem(STATE_KEY);
@@ -50,6 +59,7 @@
 
     function saveState() {
         localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        syncToCloud();
     }
 
     function loadSettings() {
@@ -57,10 +67,10 @@
             const raw = localStorage.getItem(SETTINGS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '' };
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', sheetsUrl: '' };
     }
 
-    function saveSettings() {
+    function saveSettingsToStorage() {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     }
 
@@ -73,9 +83,111 @@
     }
 
     function saveHistory() {
-        // Keep last 50 entries
         if (history.length > 50) history = history.slice(0, 50);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+
+    function loadPending() {
+        try {
+            const raw = localStorage.getItem(PENDING_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) { /* ignore */ }
+        return [];
+    }
+
+    function savePending() {
+        localStorage.setItem(PENDING_KEY, JSON.stringify(pendingEntries));
+    }
+
+    // === Google Sheets Sync ===
+    async function syncToCloud() {
+        if (!settings.sheetsUrl || syncing) return;
+
+        syncing = true;
+        updateSyncStatus('syncing');
+
+        try {
+            const payload = {
+                action: 'sync',
+                stock: state.stock,
+                lastProcessed: state.lastProcessed,
+                newEntries: pendingEntries
+            };
+
+            const response = await fetch(settings.sheetsUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                pendingEntries = [];
+                savePending();
+                updateSyncStatus('synced');
+            } else {
+                updateSyncStatus('error');
+            }
+        } catch (e) {
+            console.error('Sync error:', e);
+            updateSyncStatus('error');
+        }
+
+        syncing = false;
+    }
+
+    async function syncFromCloud() {
+        if (!settings.sheetsUrl) return;
+
+        updateSyncStatus('syncing');
+
+        try {
+            const response = await fetch(settings.sheetsUrl + '?action=getState');
+            if (!response.ok) {
+                updateSyncStatus('error');
+                return;
+            }
+
+            const cloudState = await response.json();
+
+            if (cloudState.lastProcessed && cloudState.lastProcessed > state.lastProcessed) {
+                state.stock = cloudState.stock;
+                state.lastProcessed = cloudState.lastProcessed;
+                localStorage.setItem(STATE_KEY, JSON.stringify(state));
+                processAutoDeductions();
+                render();
+            }
+
+            const histResponse = await fetch(settings.sheetsUrl + '?action=getHistory');
+            if (histResponse.ok) {
+                const cloudHistory = await histResponse.json();
+                if (cloudHistory.history && cloudHistory.history.length > 0) {
+                    history = cloudHistory.history;
+                    saveHistory();
+                    renderHistory();
+                }
+            }
+
+            if (pendingEntries.length > 0) {
+                await syncToCloud();
+            }
+
+            updateSyncStatus('synced');
+        } catch (e) {
+            console.error('Sync from cloud error:', e);
+            updateSyncStatus('error');
+        }
+    }
+
+    function updateSyncStatus(status) {
+        if (!syncStatusEl) return;
+        syncStatusEl.className = 'sync-status ' + status;
+        const labels = {
+            syncing: '⟳ A sincronizar...',
+            synced: '✓ Sincronizado',
+            error: '✗ Erro de sync',
+            offline: '○ Apenas local'
+        };
+        syncStatusEl.textContent = labels[status] || '';
     }
 
     // === Auto Deduction Logic ===
@@ -84,10 +196,7 @@
         const lastProcessed = new Date(state.lastProcessed);
         let deducted = 0;
 
-        // Calculate all meal times between lastProcessed and now
         let cursor = new Date(lastProcessed);
-
-        // Move to next meal time after lastProcessed
         cursor = getNextMealTime(cursor);
 
         while (cursor <= now) {
@@ -104,7 +213,7 @@
         }
 
         state.lastProcessed = now.getTime();
-        saveState();
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
     }
 
     function getNextMealTime(fromDate) {
@@ -213,18 +322,21 @@
 
     // === History ===
     function addHistoryEntry(type, quantity, description) {
-        history.unshift({
+        const entry = {
             type,
             quantity,
             description,
             date: new Date().toISOString()
-        });
+        };
+        history.unshift(entry);
         saveHistory();
+
+        pendingEntries.push(entry);
+        savePending();
     }
 
     // === Render ===
     function render() {
-        // Stock count
         stockCountEl.textContent = state.stock;
         stockCountEl.className = 'stock-number';
         stockStatusEl.className = 'stock-status';
@@ -243,21 +355,22 @@
             stockStatusEl.style.color = '';
         }
 
-        // Next meals
         const { nextMorning, nextEvening } = getNextMealTimes();
         nextMorningEl.textContent = formatRelativeTime(nextMorning);
         nextEveningEl.textContent = formatRelativeTime(nextEvening);
 
-        // History
         renderHistory();
 
-        // Settings
         alertThresholdEl.value = settings.alertThreshold;
         telegramTokenEl.value = settings.telegramToken;
         telegramChatIdEl.value = settings.telegramChatId;
+        if (sheetsUrlEl) sheetsUrlEl.value = settings.sheetsUrl;
 
-        // Last update
         lastUpdateEl.textContent = formatDateTime(new Date(state.lastProcessed));
+
+        if (!settings.sheetsUrl) {
+            updateSyncStatus('offline');
+        }
     }
 
     function renderHistory() {
@@ -334,9 +447,14 @@
         settings.alertThreshold = parseInt(alertThresholdEl.value, 10) || 5;
         settings.telegramToken = telegramTokenEl.value.trim();
         settings.telegramChatId = telegramChatIdEl.value.trim();
-        saveSettings();
+        settings.sheetsUrl = sheetsUrlEl ? sheetsUrlEl.value.trim() : '';
+        saveSettingsToStorage();
         render();
         showToast('Configurações guardadas');
+
+        if (settings.sheetsUrl) {
+            syncFromCloud();
+        }
     }
 
     async function handleTestNotification() {
@@ -356,12 +474,12 @@
 
     // === Schedule ===
     function scheduleNextCheck() {
-        // Check every minute for meal deductions
         setInterval(function () {
             const previousStock = state.stock;
             processAutoDeductions();
             if (state.stock !== previousStock) {
                 render();
+                syncToCloud();
             }
         }, 60000);
     }
