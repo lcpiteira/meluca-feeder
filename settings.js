@@ -4,6 +4,26 @@
     const SETTINGS_KEY = 'melucafeeder_settings';
     const AUTH_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256 of "1234"
 
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
+        authDomain: "melucafeeder.firebaseapp.com",
+        databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "melucafeeder",
+        storageBucket: "melucafeeder.firebasestorage.app",
+        messagingSenderId: "314126208675",
+        appId: "1:314126208675:web:424edf29c499aa168db916"
+    };
+
+    let db = null;
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        db = firebase.database();
+    } catch (e) {
+        console.error('Firebase init error in settings:', e);
+    }
+
     const loginSection = document.getElementById('loginSection');
     const settingsPanel = document.getElementById('settingsPanel');
     const alertPanel = document.getElementById('alertPanel');
@@ -70,18 +90,34 @@
         telegramPanel.style.display = '';
         actionsPanel.style.display = '';
 
-        const settings = loadSettings();
-        alertThresholdEl.value = settings.alertThreshold || 5;
-        telegramTokenEl.value = settings.telegramToken || '';
-        telegramChatIdEl.value = settings.telegramChatId || '';
+        // Load from Firebase first, fallback to localStorage
+        if (db) {
+            db.ref('settings').once('value', function (snapshot) {
+                const s = snapshot.val() || loadSettings();
+                alertThresholdEl.value = s.alertThreshold || 5;
+                telegramTokenEl.value = s.telegramToken || '';
+                telegramChatIdEl.value = s.telegramChatId || '';
+            });
+        } else {
+            const s = loadSettings();
+            alertThresholdEl.value = s.alertThreshold || 5;
+            telegramTokenEl.value = s.telegramToken || '';
+            telegramChatIdEl.value = s.telegramChatId || '';
+        }
     }
 
     function handleSave() {
-        const settings = loadSettings();
-        settings.alertThreshold = parseInt(alertThresholdEl.value, 10) || 5;
-        settings.telegramToken = telegramTokenEl.value.trim();
-        settings.telegramChatId = telegramChatIdEl.value.trim();
-        saveSettings(settings);
+        const settings = {
+            alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
+            telegramToken: telegramTokenEl.value.trim(),
+            telegramChatId: telegramChatIdEl.value.trim()
+        };
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+
+        if (db) {
+            db.ref('settings').set(settings);
+        }
+
         showToast('Configurações guardadas');
     }
 

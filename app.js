@@ -87,6 +87,9 @@
                     renderHistory();
                 }
             });
+
+            // Listen for settings changes
+            loadSettingsFromFirebase();
         } catch (e) {
             console.error('Firebase init error:', e);
             updateSyncStatus('error');
@@ -100,6 +103,17 @@
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
         return { alertThreshold: 5, telegramToken: '', telegramChatId: '' };
+    }
+
+    function loadSettingsFromFirebase() {
+        if (!db) return;
+        db.ref('settings').on('value', function (snapshot) {
+            const cloudSettings = snapshot.val();
+            if (cloudSettings) {
+                settings = cloudSettings;
+                localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            }
+        });
     }
 
     // === Firebase Write ===
