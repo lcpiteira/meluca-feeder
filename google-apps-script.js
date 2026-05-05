@@ -29,6 +29,11 @@ function doGet(e) {
     return respond(getHistory());
   }
 
+  if (action === 'sync') {
+    var data = JSON.parse(e.parameter.data);
+    return respond(fullSync(data));
+  }
+
   return respond({ error: 'Invalid action' });
 }
 

@@ -10,7 +10,7 @@
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
 
-    const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxzpUXd4Khz38ui0kDv3XD_1l_Lp__tjsETUihvXRuG-J1gDqSZQe3ULGmBOHmML98QzQ/exec';
+    const DEFAULT_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxTYYxFvjZYOyRunR8HaBFKwwHwm_GTxA3OusgB-Kp35M8md_toDosJgcea-rS0aeINxQ/exec';
 
     let state = loadState();
     let settings = loadSettings();
@@ -105,6 +105,7 @@
         updateSyncStatus('syncing');
 
         try {
+            // Use GET with encoded data to avoid CORS/redirect issues with POST
             const payload = {
                 action: 'sync',
                 stock: state.stock,
@@ -112,20 +113,20 @@
                 newEntries: pendingEntries
             };
 
-            // Google Apps Script redirects POST requests (302).
-            // Using no-cors ensures the request goes through even with the redirect.
-            // We cannot read the response body in no-cors mode, but the write succeeds.
-            const response = await fetch(settings.sheetsUrl, {
-                method: 'POST',
-                body: JSON.stringify(payload),
-                mode: 'no-cors'
+            const params = new URLSearchParams({
+                action: 'sync',
+                data: JSON.stringify(payload)
             });
 
-            // In no-cors mode, response.type is 'opaque' and status is 0
-            // We assume success if no exception was thrown
-            pendingEntries = [];
-            savePending();
-            updateSyncStatus('synced');
+            const response = await fetch(settings.sheetsUrl + '?' + params.toString());
+
+            if (response.ok) {
+                pendingEntries = [];
+                savePending();
+                updateSyncStatus('synced');
+            } else {
+                updateSyncStatus('error');
+            }
         } catch (e) {
             console.error('Sync error:', e);
             updateSyncStatus('error');

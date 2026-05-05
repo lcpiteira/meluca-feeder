@@ -31,7 +31,7 @@
             alertThreshold: 5,
             telegramToken: '',
             telegramChatId: '',
-            sheetsUrl: 'https://script.google.com/macros/s/AKfycbxzpUXd4Khz38ui0kDv3XD_1l_Lp__tjsETUihvXRuG-J1gDqSZQe3ULGmBOHmML98QzQ/exec'
+            sheetsUrl: 'https://script.google.com/macros/s/AKfycbxTYYxFvjZYOyRunR8HaBFKwwHwm_GTxA3OusgB-Kp35M8md_toDosJgcea-rS0aeINxQ/exec'
         };
     }
 
