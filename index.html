@@ -20,94 +20,113 @@
         </header>
 
         <main>
-            <section class="stock-section">
-                <div class="stock-display">
-                    <span class="stock-label">Refeições em stock</span>
-                    <span class="stock-number" id="stockCount">0</span>
-                    <span class="stock-status" id="stockStatus"></span>
+            <!-- Tab Navigation -->
+            <nav class="tabs">
+                <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
+                <button class="tab" data-tab="prep">🍳 Preparação</button>
+                <button class="tab" data-tab="weight">⚖️ Peso</button>
+            </nav>
+
+            <!-- Tab: Dashboard -->
+            <div class="tab-content active" id="tab-dashboard">
+                <section class="stock-section">
+                    <div class="stock-display">
+                        <span class="stock-label">Refeições em stock</span>
+                        <span class="stock-number" id="stockCount">0</span>
+                        <span class="stock-status" id="stockStatus"></span>
+                    </div>
+
+                    <div class="next-meals">
+                        <div class="meal-info">
+                            <span class="meal-icon">🌅</span>
+                            <span>Próxima manhã (8h)</span>
+                            <span class="meal-time" id="nextMorning">--</span>
+                        </div>
+                        <div class="meal-info">
+                            <span class="meal-icon">🌙</span>
+                            <span>Próxima noite (21h)</span>
+                            <span class="meal-time" id="nextEvening">--</span>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="grid-2col">
+                    <section class="actions-section">
+                        <h2>Adicionar Produção</h2>
+                        <div class="add-form">
+                            <input type="number" id="addQuantity" min="1" value="1" placeholder="Nº refeições">
+                            <button id="addBtn" class="btn btn-primary">+ Adicionar</button>
+                        </div>
+                    </section>
+
+                    <section class="manual-section">
+                        <h2>Ajuste Manual</h2>
+                        <div class="manual-actions">
+                            <button id="manualDeduct" class="btn btn-secondary">- 1 Refeição</button>
+                            <button id="manualAdd" class="btn btn-secondary">+ 1 Refeição</button>
+                        </div>
+                    </section>
                 </div>
 
-                <div class="next-meals">
-                    <div class="meal-info">
-                        <span class="meal-icon">🌅</span>
-                        <span>Próxima manhã (8h)</span>
-                        <span class="meal-time" id="nextMorning">--</span>
+                <section class="history-section">
+                    <h2>Histórico</h2>
+                    <div class="history-list" id="historyList">
+                        <p class="empty-history">Sem registos</p>
                     </div>
-                    <div class="meal-info">
-                        <span class="meal-icon">🌙</span>
-                        <span>Próxima noite (21h)</span>
-                        <span class="meal-time" id="nextEvening">--</span>
-                    </div>
-                </div>
-            </section>
+                </section>
+            </div>
 
-            <section class="actions-section">
-                <h2>Adicionar Produção</h2>
-                <div class="add-form">
-                    <input type="number" id="addQuantity" min="1" value="1" placeholder="Nº refeições">
-                    <button id="addBtn" class="btn btn-primary">+ Adicionar</button>
-                </div>
-            </section>
-
-            <section class="manual-section">
-                <h2>Ajuste Manual</h2>
-                <div class="manual-actions">
-                    <button id="manualDeduct" class="btn btn-secondary">- 1 Refeição</button>
-                    <button id="manualAdd" class="btn btn-secondary">+ 1 Refeição</button>
-                </div>
-            </section>
-
-            <section class="calculator-section">
-                <h2>Calculadora de Ingredientes</h2>
-                <div class="calc-ingredients">
-                    <div class="calc-row">
-                        <span class="calc-icon">🍗</span>
-                        <label>Frango (g)</label>
-                        <input type="number" id="calcChicken" min="0" value="0" class="calc-input">
+            <!-- Tab: Preparação -->
+            <div class="tab-content" id="tab-prep">
+                <section class="calculator-section">
+                    <h2>Calculadora de Ingredientes</h2>
+                    <p class="section-desc">Introduz as quantidades disponíveis para calcular quantas refeições consegues preparar.</p>
+                    <div class="calc-ingredients">
+                        <div class="calc-row">
+                            <span class="calc-icon">🍗</span>
+                            <label>Frango (g)</label>
+                            <input type="number" id="calcChicken" min="0" value="0" class="calc-input">
+                        </div>
+                        <div class="calc-row">
+                            <span class="calc-icon">🍚</span>
+                            <label>Arroz (g)</label>
+                            <input type="number" id="calcRice" min="0" value="0" class="calc-input">
+                        </div>
+                        <div class="calc-row">
+                            <span class="calc-icon">🫛</span>
+                            <label>Ervilhas (g)</label>
+                            <input type="number" id="calcPeas" min="0" value="0" class="calc-input">
+                        </div>
+                        <div class="calc-row">
+                            <span class="calc-icon">🥚</span>
+                            <label>Ovos (un)</label>
+                            <input type="number" id="calcEggs" min="0" value="0" step="1" class="calc-input">
+                        </div>
                     </div>
-                    <div class="calc-row">
-                        <span class="calc-icon">🍚</span>
-                        <label>Arroz (g)</label>
-                        <input type="number" id="calcRice" min="0" value="0" class="calc-input">
+                    <button id="calcBtn" class="btn btn-primary calc-btn">Calcular Refeições</button>
+                    <div class="calc-result" id="calcResult" style="display: none;">
+                        <span class="calc-result-number" id="calcResultNumber">0</span>
+                        <span class="calc-result-label">refeições possíveis</span>
+                        <p class="calc-result-detail" id="calcResultDetail"></p>
                     </div>
-                    <div class="calc-row">
-                        <span class="calc-icon">🫛</span>
-                        <label>Ervilhas (g)</label>
-                        <input type="number" id="calcPeas" min="0" value="0" class="calc-input">
-                    </div>
-                    <div class="calc-row">
-                        <span class="calc-icon">🥚</span>
-                        <label>Ovos (un)</label>
-                        <input type="number" id="calcEggs" min="0" value="0" step="1" class="calc-input">
-                    </div>
-                </div>
-                <button id="calcBtn" class="btn btn-primary calc-btn">Calcular Refeições</button>
-                <div class="calc-result" id="calcResult" style="display: none;">
-                    <span class="calc-result-number" id="calcResultNumber">0</span>
-                    <span class="calc-result-label">refeições possíveis</span>
-                    <p class="calc-result-detail" id="calcResultDetail"></p>
-                </div>
-            </section>
+                </section>
+            </div>
 
-            <section class="weight-section">
-                <h2>Evolução do Peso</h2>
-                <div class="weight-input-row">
-                    <input type="number" id="weightInput" min="0" step="0.1" placeholder="Peso (kg)">
-                    <button id="weightBtn" class="btn btn-primary">Registar</button>
-                </div>
-                <div class="weight-last" id="weightLast"></div>
-                <div class="weight-chart-container">
-                    <canvas id="weightChart" width="400" height="180"></canvas>
-                </div>
-                <div class="weight-history" id="weightHistory"></div>
-            </section>
-
-            <section class="history-section">
-                <h2>Histórico</h2>
-                <div class="history-list" id="historyList">
-                    <p class="empty-history">Sem registos</p>
-                </div>
-            </section>
+            <!-- Tab: Peso -->
+            <div class="tab-content" id="tab-weight">
+                <section class="weight-section">
+                    <h2>Evolução do Peso</h2>
+                    <div class="weight-input-row">
+                        <input type="number" id="weightInput" min="0" step="0.1" placeholder="Peso (kg)">
+                        <button id="weightBtn" class="btn btn-primary">Registar</button>
+                    </div>
+                    <div class="weight-last" id="weightLast"></div>
+                    <div class="weight-chart-container">
+                        <canvas id="weightChart" width="400" height="180"></canvas>
+                    </div>
+                    <div class="weight-history" id="weightHistory"></div>
+                </section>
+            </div>
         </main>
 
         <footer>

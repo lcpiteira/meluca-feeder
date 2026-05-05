@@ -88,10 +88,83 @@ body {
 }
 
 .app {
-    max-width: 480px;
+    max-width: 520px;
     margin: 0 auto;
     padding: 16px;
     padding-bottom: 32px;
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+}
+
+.tab {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--text-light);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tab.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="light"] .tab:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Grid layout */
+.grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.grid-2col section {
+    margin-bottom: 0;
+}
+
+.section-desc {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
 }
 
 header {
@@ -758,6 +831,20 @@ footer {
     section {
         padding: 18px;
         border-radius: 14px;
+    }
+
+    .grid-2col {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .grid-2col section {
+        margin-bottom: 0;
+    }
+
+    .tab {
+        font-size: 0.75rem;
+        padding: 10px 6px;
     }
 
     .btn {

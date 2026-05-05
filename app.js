@@ -366,6 +366,21 @@
         weightInputEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleWeightAdd();
         });
+
+        // Tab navigation
+        document.querySelectorAll('.tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+                document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active'); });
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.getAttribute('data-tab')).classList.add('active');
+
+                // Redraw chart when weight tab becomes visible
+                if (tab.getAttribute('data-tab') === 'weight' && weightData.length >= 2) {
+                    setTimeout(drawChart, 50);
+                }
+            });
+        });
     }
 
     function handleCalculate() {
