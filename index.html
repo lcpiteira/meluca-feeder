@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MelucaFeeder</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐕</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>🐕 MelucaFeeder</h1>
+            <p class="subtitle">Gestão de refeições da Meluca</p>
+        </header>
+
+        <main>
+            <section class="stock-section">
+                <div class="stock-display">
+                    <span class="stock-label">Refeições em stock</span>
+                    <span class="stock-number" id="stockCount">0</span>
+                    <span class="stock-status" id="stockStatus"></span>
+                </div>
+
+                <div class="next-meals">
+                    <div class="meal-info">
+                        <span class="meal-icon">🌅</span>
+                        <span>Próxima manhã (8h)</span>
+                        <span class="meal-time" id="nextMorning">--</span>
+                    </div>
+                    <div class="meal-info">
+                        <span class="meal-icon">🌙</span>
+                        <span>Próxima noite (21h)</span>
+                        <span class="meal-time" id="nextEvening">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="actions-section">
+                <h2>Adicionar Produção</h2>
+                <div class="add-form">
+                    <input type="number" id="addQuantity" min="1" value="1" placeholder="Nº refeições">
+                    <button id="addBtn" class="btn btn-primary">+ Adicionar</button>
+                </div>
+            </section>
+
+            <section class="manual-section">
+                <h2>Ajuste Manual</h2>
+                <div class="manual-actions">
+                    <button id="manualDeduct" class="btn btn-secondary">- 1 Refeição</button>
+                    <button id="manualAdd" class="btn btn-secondary">+ 1 Refeição</button>
+                </div>
+            </section>
+
+            <section class="history-section">
+                <h2>Histórico</h2>
+                <div class="history-list" id="historyList">
+                    <p class="empty-history">Sem registos</p>
+                </div>
+            </section>
+
+            <section class="settings-section">
+                <h2>⚙️ Configurações</h2>
+                <div class="settings-form">
+                    <div class="setting-group">
+                        <label>Alerta quando stock atingir:</label>
+                        <input type="number" id="alertThreshold" min="1" value="5">
+                        <span>refeições</span>
+                    </div>
+                    <div class="setting-group">
+                        <label>Telegram Bot Token:</label>
+                        <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
+                    </div>
+                    <div class="setting-group">
+                        <label>Telegram Chat ID:</label>
+                        <input type="text" id="telegramChatId" placeholder="-1001234567890">
+                    </div>
+                    <div class="setting-group">
+                        <button id="testNotification" class="btn btn-small">Testar Notificação</button>
+                        <button id="saveSettings" class="btn btn-primary btn-small">Guardar</button>
+                    </div>
+                    <p class="settings-help">
+                        Para configurar o Telegram: cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
+                        obtém o token, e envia uma mensagem ao bot. Depois usa 
+                        <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
+                        para descobrir o teu Chat ID.
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>MelucaFeeder &mdash; Última actualização: <span id="lastUpdate">--</span></p>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
