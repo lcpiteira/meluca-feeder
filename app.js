@@ -52,7 +52,7 @@
             const raw = localStorage.getItem(STATE_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { stock: 0, lastProcessed: Date.now() };
+        return { stock: 0, lastProcessed: 0 };
     }
 
     function saveState() {
@@ -149,7 +149,7 @@
 
             const cloudState = await response.json();
 
-            if (cloudState.lastProcessed && cloudState.lastProcessed > state.lastProcessed) {
+            if (cloudState.lastProcessed && cloudState.lastProcessed >= state.lastProcessed) {
                 state.stock = cloudState.stock;
                 state.lastProcessed = cloudState.lastProcessed;
                 localStorage.setItem(STATE_KEY, JSON.stringify(state));
