@@ -419,6 +419,30 @@
         }, 3000);
     }
 
+    // === Theme Toggle ===
+    function initTheme() {
+        const saved = localStorage.getItem('melucafeeder_theme');
+        const themeToggle = document.getElementById('themeToggle');
+        if (saved === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeToggle.textContent = '☀️';
+        }
+
+        themeToggle.addEventListener('click', function () {
+            const current = document.documentElement.getAttribute('data-theme');
+            if (current === 'light') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('melucafeeder_theme', 'dark');
+                themeToggle.textContent = '🌙';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('melucafeeder_theme', 'light');
+                themeToggle.textContent = '☀️';
+            }
+        });
+    }
+
     // === Start ===
+    initTheme();
     init();
 })();
