@@ -519,16 +519,155 @@ footer {
 }
 
 /* Responsive */
-@media (max-width: 360px) {
-    .stock-number {
-        font-size: 3.5rem;
+
+/* Tablets and smaller desktops */
+@media (max-width: 768px) {
+    .app {
+        max-width: 100%;
+        padding: 12px;
     }
-    
+
+    section {
+        padding: 20px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    header {
+        padding: 24px 0 16px;
+    }
+
+    header h1 {
+        font-size: 1.6rem;
+    }
+
+    .stock-number {
+        font-size: 4rem;
+    }
+
+    section {
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .btn {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        width: 100%;
+    }
+
     .add-form {
         flex-direction: column;
     }
 
+    .add-form input {
+        padding: 14px;
+    }
+
     .manual-actions {
         flex-direction: column;
+    }
+
+    .meal-info {
+        font-size: 0.85rem;
+        padding: 8px;
+    }
+
+    .meal-time {
+        font-size: 0.75rem;
+    }
+
+    .history-item {
+        padding: 10px 0;
+        font-size: 0.8rem;
+        gap: 6px;
+    }
+
+    .history-item .type {
+        font-size: 0.75rem;
+        min-width: 36px;
+    }
+
+    footer {
+        padding: 20px 12px;
+    }
+}
+
+/* Very small devices */
+@media (max-width: 360px) {
+    .stock-number {
+        font-size: 3.5rem;
+    }
+
+    header h1 {
+        font-size: 1.4rem;
+    }
+
+    .subtitle {
+        font-size: 0.8rem;
+    }
+
+    section h2 {
+        font-size: 0.75rem;
+    }
+
+    .btn {
+        padding: 12px 14px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Safe area for notched devices (iPhone X+) */
+@supports (padding: env(safe-area-inset-bottom)) {
+    .app {
+        padding-bottom: calc(32px + env(safe-area-inset-bottom));
+        padding-left: calc(16px + env(safe-area-inset-left));
+        padding-right: calc(16px + env(safe-area-inset-right));
+    }
+
+    .toast {
+        bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+}
+
+/* Touch-friendly: larger tap targets on touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .btn {
+        min-height: 48px;
+    }
+
+    .add-form input {
+        min-height: 48px;
+    }
+
+    .settings-link {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .login-form input {
+        min-height: 48px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .stock-display {
+        padding: 12px 0;
+    }
+
+    .stock-number {
+        font-size: 3rem;
+    }
+
+    header {
+        padding: 12px 0;
+    }
+
+    section {
+        margin-bottom: 10px;
+        padding: 14px;
     }
 }
