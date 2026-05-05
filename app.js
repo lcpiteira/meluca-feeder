@@ -44,6 +44,13 @@
     const calcResultEl = document.getElementById('calcResult');
     const calcResultNumberEl = document.getElementById('calcResultNumber');
     const calcResultDetailEl = document.getElementById('calcResultDetail');
+    const weightInputEl = document.getElementById('weightInput');
+    const weightBtnEl = document.getElementById('weightBtn');
+    const weightLastEl = document.getElementById('weightLast');
+    const weightChartEl = document.getElementById('weightChart');
+    const weightHistoryEl = document.getElementById('weightHistory');
+
+    let weightData = [];
 
     // === Initialization ===
     function init() {
@@ -98,6 +105,20 @@
 
             // Listen for settings changes
             loadSettingsFromFirebase();
+
+            // Listen for weight data
+            db.ref('weight').orderByChild('date').on('value', function (snapshot) {
+                const data = snapshot.val();
+                if (data) {
+                    weightData = Object.values(data).sort(function (a, b) {
+                        return new Date(a.date) - new Date(b.date);
+                    });
+                } else {
+                    weightData = [];
+                }
+                renderWeight();
+                checkWeightReminder();
+            });
         } catch (e) {
             console.error('Firebase init error:', e);
             updateSyncStatus('error');
@@ -341,6 +362,10 @@
         manualDeductEl.addEventListener('click', handleManualDeduct);
         manualAddEl.addEventListener('click', handleManualAdd);
         calcBtnEl.addEventListener('click', handleCalculate);
+        weightBtnEl.addEventListener('click', handleWeightAdd);
+        weightInputEl.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleWeightAdd();
+        });
     }
 
     function handleCalculate() {
@@ -474,6 +499,172 @@
         setTimeout(function () {
             toastEl.classList.remove('show');
         }, 3000);
+    }
+
+    // === Weight Tracking ===
+    function handleWeightAdd() {
+        const weight = parseFloat(weightInputEl.value);
+        if (isNaN(weight) || weight <= 0) {
+            showToast('Introduz um peso válido');
+            return;
+        }
+
+        const entry = {
+            weight: weight,
+            date: new Date().toISOString()
+        };
+
+        if (db) {
+            db.ref('weight').push(entry);
+        }
+
+        weightInputEl.value = '';
+        showToast(weight + ' kg registado');
+    }
+
+    function renderWeight() {
+        if (weightData.length === 0) {
+            weightLastEl.textContent = '';
+            weightHistoryEl.innerHTML = '<p class="empty-history">Sem registos de peso</p>';
+            clearChart();
+            return;
+        }
+
+        const last = weightData[weightData.length - 1];
+        const lastDate = new Date(last.date);
+        const daysAgo = Math.floor((Date.now() - lastDate.getTime()) / 86400000);
+        const daysText = daysAgo === 0 ? 'hoje' : daysAgo === 1 ? 'ontem' : 'há ' + daysAgo + ' dias';
+        weightLastEl.innerHTML = '<span class="weight-current">' + last.weight + ' kg</span> <span class="weight-date">(' + daysText + ')</span>';
+
+        // Render last entries
+        const recent = weightData.slice(-10).reverse();
+        weightHistoryEl.innerHTML = recent.map(function (e) {
+            const d = new Date(e.date);
+            return '<div class="weight-entry"><span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span></div>';
+        }).join('');
+
+        drawChart();
+    }
+
+    function clearChart() {
+        const ctx = weightChartEl.getContext('2d');
+        ctx.clearRect(0, 0, weightChartEl.width, weightChartEl.height);
+    }
+
+    function drawChart() {
+        const canvas = weightChartEl;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+
+        const w = canvas.offsetWidth;
+        const h = canvas.offsetHeight;
+        const padding = { top: 20, right: 20, bottom: 30, left: 45 };
+        const chartW = w - padding.left - padding.right;
+        const chartH = h - padding.top - padding.bottom;
+
+        ctx.clearRect(0, 0, w, h);
+
+        if (weightData.length < 2) {
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+            ctx.font = '12px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Regista pelo menos 2 pesos para ver o gráfico', w / 2, h / 2);
+            return;
+        }
+
+        const data = weightData.slice(-20);
+        const weights = data.map(function (e) { return e.weight; });
+        const minW = Math.min.apply(null, weights) - 0.5;
+        const maxW = Math.max.apply(null, weights) + 0.5;
+        const range = maxW - minW || 1;
+
+        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+        const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim() || '#818cf8';
+        const dotColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6366f1';
+        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
+
+        // Grid lines
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        for (var i = 0; i <= 4; i++) {
+            var y = padding.top + chartH - (chartH * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + chartW, y);
+            ctx.stroke();
+
+            var label = (minW + range * i / 4).toFixed(1);
+            ctx.fillStyle = textColor;
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(label, padding.left - 6, y + 3);
+        }
+
+        // Date labels
+        ctx.fillStyle = textColor;
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        var firstDate = new Date(data[0].date);
+        var lastDate = new Date(data[data.length - 1].date);
+        ctx.fillText(formatShortDate(firstDate), padding.left, h - 8);
+        ctx.fillText(formatShortDate(lastDate), padding.left + chartW, h - 8);
+
+        // Line
+        ctx.beginPath();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        var points = [];
+        for (var j = 0; j < data.length; j++) {
+            var x = padding.left + (chartW * j / (data.length - 1));
+            var yVal = padding.top + chartH - (chartH * (data[j].weight - minW) / range);
+            points.push({ x: x, y: yVal });
+            if (j === 0) ctx.moveTo(x, yVal);
+            else ctx.lineTo(x, yVal);
+        }
+        ctx.stroke();
+
+        // Gradient fill
+        ctx.lineTo(padding.left + chartW, padding.top + chartH);
+        ctx.lineTo(padding.left, padding.top + chartH);
+        ctx.closePath();
+        var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Dots
+        for (var k = 0; k < points.length; k++) {
+            ctx.beginPath();
+            ctx.arc(points[k].x, points[k].y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = dotColor;
+            ctx.fill();
+        }
+    }
+
+    function formatShortDate(date) {
+        return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
+    }
+
+    function checkWeightReminder() {
+        if (weightData.length === 0) return;
+        var last = weightData[weightData.length - 1];
+        var daysSince = Math.floor((Date.now() - new Date(last.date).getTime()) / 86400000);
+        var reminderKey = 'melucafeeder_weight_reminder_sent';
+        var lastReminder = localStorage.getItem(reminderKey);
+        var today = new Date().toISOString().slice(0, 10);
+
+        if (daysSince >= 7 && lastReminder !== today) {
+            localStorage.setItem(reminderKey, today);
+            sendNotification('⚖️ MelucaFeeder: Já passaram ' + daysSince + ' dias desde a última pesagem. Hora de pesar a Meluca!');
+        }
     }
 
     // === Theme Toggle ===
