@@ -154,10 +154,12 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    margin-bottom: 16px;
 }
 
 .grid-2col section {
     margin-bottom: 0;
+    min-width: 0;
 }
 
 .section-desc {
@@ -315,12 +317,13 @@ section h2 {
 /* Add Form */
 .add-form {
     display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
 .add-form input {
-    flex: 1;
-    padding: 14px 18px;
+    width: 100%;
+    padding: 12px 16px;
     border: 2px solid var(--border);
     border-radius: var(--radius-sm);
     font-size: 1.1rem;
@@ -383,11 +386,12 @@ section h2 {
 /* Manual Actions */
 .manual-actions {
     display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
 .manual-actions .btn {
-    flex: 1;
+    width: 100%;
 }
 
 /* Calculator */
@@ -848,21 +852,12 @@ footer {
     }
 
     .btn {
-        padding: 14px 16px;
+        padding: 12px 16px;
         font-size: 0.9rem;
-        width: 100%;
-    }
-
-    .add-form {
-        flex-direction: column;
     }
 
     .add-form input {
         padding: 14px;
-    }
-
-    .manual-actions {
-        flex-direction: column;
     }
 
     .meal-info {
