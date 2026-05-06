@@ -49,8 +49,30 @@
     const weightLastEl = document.getElementById('weightLast');
     const weightChartEl = document.getElementById('weightChart');
     const weightHistoryEl = document.getElementById('weightHistory');
+    const ruptureInfoEl = document.getElementById('ruptureInfo');
+    const shoppingTargetEl = document.getElementById('shoppingTarget');
+    const shoppingBtnEl = document.getElementById('shoppingBtn');
+    const shoppingListEl = document.getElementById('shoppingList');
+    const vetTypeEl = document.getElementById('vetType');
+    const vetDescEl = document.getElementById('vetDesc');
+    const vetDateEl = document.getElementById('vetDate');
+    const vetNextDateEl = document.getElementById('vetNextDate');
+    const vetAddBtnEl = document.getElementById('vetAddBtn');
+    const vetUpcomingEl = document.getElementById('vetUpcoming');
+    const vetHistoryEl = document.getElementById('vetHistory');
+    const healthNoteTextEl = document.getElementById('healthNoteText');
+    const healthNoteBtnEl = document.getElementById('healthNoteBtn');
+    const healthNotesListEl = document.getElementById('healthNotesList');
+    const calPrevEl = document.getElementById('calPrev');
+    const calNextEl = document.getElementById('calNext');
+    const calMonthEl = document.getElementById('calMonth');
+    const calendarGridEl = document.getElementById('calendarGrid');
 
     let weightData = [];
+    let vetData = [];
+    let healthNotes = [];
+    let calendarMonth = new Date().getMonth();
+    let calendarYear = new Date().getFullYear();
 
     // === Initialization ===
     function init() {
@@ -118,6 +140,23 @@
                 }
                 renderWeight();
                 checkWeightReminder();
+            });
+
+            // Listen for vet records
+            db.ref('vet').on('value', function (snapshot) {
+                const data = snapshot.val();
+                vetData = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
+                vetData.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+                renderVet();
+                checkVetReminders();
+            });
+
+            // Listen for health notes
+            db.ref('healthNotes').on('value', function (snapshot) {
+                const data = snapshot.val();
+                healthNotes = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
+                healthNotes.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+                renderHealthNotes();
             });
         } catch (e) {
             console.error('Firebase init error:', e);
@@ -317,6 +356,7 @@
         nextMorningEl.textContent = formatRelativeTime(meals.nextMorning);
         nextEveningEl.textContent = formatRelativeTime(meals.nextEvening);
 
+        renderRuptureInfo();
         renderHistory();
 
         if (state.lastProcessed > 0) {
@@ -366,6 +406,14 @@
         weightInputEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleWeightAdd();
         });
+        shoppingBtnEl.addEventListener('click', handleShoppingList);
+        vetAddBtnEl.addEventListener('click', handleVetAdd);
+        healthNoteBtnEl.addEventListener('click', handleHealthNote);
+        healthNoteTextEl.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleHealthNote();
+        });
+        calPrevEl.addEventListener('click', function () { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderCalendar(); });
+        calNextEl.addEventListener('click', function () { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderCalendar(); });
 
         // Tab navigation
         document.querySelectorAll('.tab').forEach(function (tab) {
@@ -375,12 +423,17 @@
                 tab.classList.add('active');
                 document.getElementById('tab-' + tab.getAttribute('data-tab')).classList.add('active');
 
-                // Redraw chart when weight tab becomes visible
                 if (tab.getAttribute('data-tab') === 'weight' && weightData.length >= 2) {
                     setTimeout(drawChart, 50);
                 }
             });
         });
+
+        // Init calendar
+        renderCalendar();
+
+        // Set today's date as default for vet
+        vetDateEl.value = new Date().toISOString().slice(0, 10);
     }
 
     function handleCalculate() {
@@ -593,8 +646,13 @@
 
         const data = weightData.slice(-20);
         const weights = data.map(function (e) { return e.weight; });
-        const minW = Math.min.apply(null, weights) - 0.5;
-        const maxW = Math.max.apply(null, weights) + 0.5;
+        const targetWeight = settings.targetWeight ? parseFloat(settings.targetWeight) : null;
+
+        // Include target weight in min/max calculation
+        var allValues = weights.slice();
+        if (targetWeight) allValues.push(targetWeight);
+        const minW = Math.min.apply(null, allValues) - 0.5;
+        const maxW = Math.max.apply(null, allValues) + 0.5;
         const range = maxW - minW || 1;
 
         const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
@@ -617,6 +675,23 @@
             ctx.font = '10px -apple-system, sans-serif';
             ctx.textAlign = 'right';
             ctx.fillText(label, padding.left - 6, y + 3);
+        }
+
+        // Target weight line
+        if (targetWeight) {
+            var targetY = padding.top + chartH - (chartH * (targetWeight - minW) / range);
+            ctx.beginPath();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(padding.left, targetY);
+            ctx.lineTo(padding.left + chartW, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#f472b6';
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Obj: ' + targetWeight + ' kg', padding.left + 4, targetY - 5);
         }
 
         // Date labels
@@ -666,6 +741,222 @@
 
     function formatShortDate(date) {
         return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
+    }
+
+    // === Rupture Prediction ===
+    function renderRuptureInfo() {
+        if (state.stock <= 0) {
+            ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
+            return;
+        }
+        var mealsPerDay = 2;
+        var daysLeft = state.stock / mealsPerDay;
+        var ruptureDate = new Date();
+        ruptureDate.setDate(ruptureDate.getDate() + Math.floor(daysLeft));
+        var day = String(ruptureDate.getDate()).padStart(2, '0');
+        var month = String(ruptureDate.getMonth() + 1).padStart(2, '0');
+
+        var cls = daysLeft <= 3 ? 'rupture-danger' : daysLeft <= 7 ? 'rupture-warning' : 'rupture-ok';
+        ruptureInfoEl.innerHTML = '<span class="' + cls + '">Stock acaba a <strong>' + day + '/' + month + '</strong> (' + Math.floor(daysLeft) + ' dias)</span>';
+    }
+
+    // === Shopping List ===
+    function handleShoppingList() {
+        var target = parseInt(shoppingTargetEl.value, 10);
+        if (isNaN(target) || target < 1) {
+            showToast('Introduz um número válido de refeições');
+            return;
+        }
+
+        var recipe = settings.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
+        var items = [];
+        if (recipe.chicken > 0) {
+            var totalChicken = recipe.chicken * target;
+            items.push({ name: 'Frango', amount: totalChicken, unit: 'g', display: totalChicken >= 1000 ? (totalChicken / 1000).toFixed(1) + ' kg' : totalChicken + ' g' });
+        }
+        if (recipe.rice > 0) {
+            var totalRice = recipe.rice * target;
+            items.push({ name: 'Arroz', amount: totalRice, unit: 'g', display: totalRice >= 1000 ? (totalRice / 1000).toFixed(1) + ' kg' : totalRice + ' g' });
+        }
+        if (recipe.peas > 0) {
+            var totalPeas = recipe.peas * target;
+            items.push({ name: 'Ervilhas', amount: totalPeas, unit: 'g', display: totalPeas >= 1000 ? (totalPeas / 1000).toFixed(1) + ' kg' : totalPeas + ' g' });
+        }
+        if (recipe.egg > 0) {
+            var totalEggs = Math.ceil(recipe.egg * target);
+            items.push({ name: 'Ovos', amount: totalEggs, unit: 'un', display: totalEggs + ' un' });
+        }
+
+        shoppingListEl.style.display = '';
+        shoppingListEl.innerHTML = '<div class="shopping-header">' + target + ' refeições</div>' +
+            items.map(function (item) {
+                return '<div class="shopping-item"><span class="shopping-name">' + item.name + '</span><span class="shopping-amount">' + item.display + '</span></div>';
+            }).join('');
+    }
+
+    // === Vet Records ===
+    function handleVetAdd() {
+        var type = vetTypeEl.value;
+        var desc = vetDescEl.value.trim();
+        var date = vetDateEl.value;
+        var nextDate = vetNextDateEl.value;
+
+        if (!desc) {
+            showToast('Adiciona uma descrição');
+            return;
+        }
+        if (!date) {
+            showToast('Selecciona a data');
+            return;
+        }
+
+        var entry = {
+            type: type,
+            description: desc,
+            date: date,
+            nextDate: nextDate || null,
+            createdAt: new Date().toISOString()
+        };
+
+        if (db) {
+            db.ref('vet').push(entry);
+        }
+
+        vetDescEl.value = '';
+        vetNextDateEl.value = '';
+        showToast('Registo veterinário adicionado');
+    }
+
+    function renderVet() {
+        var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '🪱 Desparasitação', outro: '📋 Outro' };
+
+        // Upcoming appointments
+        var today = new Date().toISOString().slice(0, 10);
+        var upcoming = vetData.filter(function (e) { return e.nextDate && e.nextDate >= today; })
+            .sort(function (a, b) { return a.nextDate.localeCompare(b.nextDate); });
+
+        if (upcoming.length > 0) {
+            vetUpcomingEl.innerHTML = '<h3>Próximos</h3>' + upcoming.map(function (e) {
+                var d = e.nextDate.split('-');
+                return '<div class="vet-item upcoming"><span class="vet-type">' + (typeLabels[e.type] || e.type) +
+                    '</span><span>' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span></div>';
+            }).join('');
+        } else {
+            vetUpcomingEl.innerHTML = '';
+        }
+
+        // History
+        if (vetData.length === 0) {
+            vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
+            return;
+        }
+
+        vetHistoryEl.innerHTML = '<h3>Histórico</h3>' + vetData.slice(0, 20).map(function (e) {
+            var d = e.date.split('-');
+            return '<div class="vet-item"><span class="vet-type">' + (typeLabels[e.type] || e.type) +
+                '</span><span>' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span></div>';
+        }).join('');
+    }
+
+    function checkVetReminders() {
+        var today = new Date().toISOString().slice(0, 10);
+        var reminderKey = 'melucafeeder_vet_reminder_' + today;
+        if (localStorage.getItem(reminderKey)) return;
+
+        var tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        var tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+        var upcoming = vetData.filter(function (e) {
+            return e.nextDate && (e.nextDate === today || e.nextDate === tomorrowStr);
+        });
+
+        if (upcoming.length > 0) {
+            localStorage.setItem(reminderKey, '1');
+            var msgs = upcoming.map(function (e) {
+                var when = e.nextDate === today ? 'HOJE' : 'AMANHÃ';
+                return when + ': ' + e.description;
+            });
+            sendNotification('🏥 MelucaFeeder: Lembretes veterinários\n' + msgs.join('\n'));
+        }
+    }
+
+    // === Health Notes ===
+    function handleHealthNote() {
+        var text = healthNoteTextEl.value.trim();
+        if (!text) {
+            showToast('Escreve uma nota');
+            return;
+        }
+
+        var entry = {
+            text: text,
+            date: new Date().toISOString()
+        };
+
+        if (db) {
+            db.ref('healthNotes').push(entry);
+        }
+
+        healthNoteTextEl.value = '';
+        showToast('Nota adicionada');
+    }
+
+    function renderHealthNotes() {
+        if (healthNotes.length === 0) {
+            healthNotesListEl.innerHTML = '<p class="empty-history">Sem notas de saúde</p>';
+            return;
+        }
+
+        healthNotesListEl.innerHTML = healthNotes.slice(0, 30).map(function (e) {
+            var d = new Date(e.date);
+            return '<div class="health-note-item"><span class="health-note-text">' + escapeHtml(e.text) + '</span><span class="date">' + formatDateTime(d) + '</span></div>';
+        }).join('');
+    }
+
+    // === Meal Calendar ===
+    function renderCalendar() {
+        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        calMonthEl.textContent = monthNames[calendarMonth] + ' ' + calendarYear;
+
+        var firstDay = new Date(calendarYear, calendarMonth, 1);
+        var lastDay = new Date(calendarYear, calendarMonth + 1, 0);
+        var startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+        // Count meals per day from history
+        var mealCounts = {};
+        history.forEach(function (e) {
+            if (e.type === 'auto') {
+                var d = new Date(e.date);
+                if (d.getMonth() === calendarMonth && d.getFullYear() === calendarYear) {
+                    var key = d.getDate();
+                    mealCounts[key] = (mealCounts[key] || 0) + Math.abs(e.quantity);
+                }
+            }
+        });
+
+        var html = '<div class="cal-header">S</div><div class="cal-header">T</div><div class="cal-header">Q</div><div class="cal-header">Q</div><div class="cal-header">S</div><div class="cal-header">S</div><div class="cal-header">D</div>';
+
+        for (var i = 0; i < startDow; i++) {
+            html += '<div class="cal-empty"></div>';
+        }
+
+        var today = new Date();
+        for (var day = 1; day <= lastDay.getDate(); day++) {
+            var count = mealCounts[day] || 0;
+            var isToday = day === today.getDate() && calendarMonth === today.getMonth() && calendarYear === today.getFullYear();
+            var isPast = new Date(calendarYear, calendarMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            var cls = 'cal-day';
+            if (isToday) cls += ' cal-today';
+            if (isPast) {
+                if (count >= 2) cls += ' cal-ok';
+                else if (count === 1) cls += ' cal-partial';
+                else cls += ' cal-missed';
+            }
+            html += '<div class="' + cls + '"><span class="cal-num">' + day + '</span>' + (count > 0 ? '<span class="cal-count">' + count + '</span>' : '') + '</div>';
+        }
+
+        calendarGridEl.innerHTML = html;
     }
 
     function checkWeightReminder() {

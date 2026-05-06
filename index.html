@@ -25,6 +25,7 @@
                 <button class="tab active" data-tab="dashboard">📊 Dashboard</button>
                 <button class="tab" data-tab="prep">🍳 Preparação</button>
                 <button class="tab" data-tab="weight">⚖️ Peso</button>
+                <button class="tab" data-tab="health">🏥 Saúde</button>
             </nav>
 
             <!-- Tab: Dashboard -->
@@ -35,6 +36,7 @@
                         <span class="stock-number" id="stockCount">0</span>
                         <span class="stock-status" id="stockStatus"></span>
                     </div>
+                    <div class="rupture-info" id="ruptureInfo"></div>
 
                     <div class="next-meals">
                         <div class="meal-info">
@@ -67,6 +69,21 @@
                         </div>
                     </section>
                 </div>
+
+                <section class="calendar-section">
+                    <h2>Calendário de Refeições</h2>
+                    <div class="calendar-nav">
+                        <button class="btn btn-secondary btn-small" id="calPrev">◀</button>
+                        <span id="calMonth">--</span>
+                        <button class="btn btn-secondary btn-small" id="calNext">▶</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                    <div class="calendar-legend">
+                        <span class="legend-item"><span class="dot dot-ok"></span> 2 refeições</span>
+                        <span class="legend-item"><span class="dot dot-partial"></span> 1 refeição</span>
+                        <span class="legend-item"><span class="dot dot-missed"></span> 0 refeições</span>
+                    </div>
+                </section>
 
                 <section class="history-section">
                     <h2>Histórico</h2>
@@ -110,6 +127,16 @@
                         <p class="calc-result-detail" id="calcResultDetail"></p>
                     </div>
                 </section>
+
+                <section class="shopping-section">
+                    <h2>Lista de Compras</h2>
+                    <p class="section-desc">Quantas refeições queres preparar?</p>
+                    <div class="shopping-input-row">
+                        <input type="number" id="shoppingTarget" min="1" value="14" placeholder="Nº refeições">
+                        <button id="shoppingBtn" class="btn btn-primary">Gerar Lista</button>
+                    </div>
+                    <div class="shopping-list" id="shoppingList" style="display: none;"></div>
+                </section>
             </div>
 
             <!-- Tab: Peso -->
@@ -125,6 +152,36 @@
                         <canvas id="weightChart" width="400" height="180"></canvas>
                     </div>
                     <div class="weight-history" id="weightHistory"></div>
+                </section>
+            </div>
+
+            <!-- Tab: Saúde -->
+            <div class="tab-content" id="tab-health">
+                <section class="vet-section">
+                    <h2>Registo Veterinário</h2>
+                    <div class="vet-form">
+                        <select id="vetType" class="vet-select">
+                            <option value="consulta">Consulta</option>
+                            <option value="vacina">Vacina</option>
+                            <option value="desparasitacao">Desparasitação</option>
+                            <option value="outro">Outro</option>
+                        </select>
+                        <input type="text" id="vetDesc" placeholder="Descrição" class="vet-input">
+                        <input type="date" id="vetDate" class="vet-input">
+                        <input type="date" id="vetNextDate" placeholder="Próxima data" class="vet-input">
+                        <button id="vetAddBtn" class="btn btn-primary">Registar</button>
+                    </div>
+                    <div class="vet-upcoming" id="vetUpcoming"></div>
+                    <div class="vet-history" id="vetHistory"></div>
+                </section>
+
+                <section class="health-notes-section">
+                    <h2>Notas de Saúde</h2>
+                    <div class="health-note-form">
+                        <input type="text" id="healthNoteText" placeholder="Ex: Vómito, diarreia, alergia..." class="vet-input">
+                        <button id="healthNoteBtn" class="btn btn-primary">Adicionar</button>
+                    </div>
+                    <div class="health-notes-list" id="healthNotesList"></div>
                 </section>
             </div>
         </main>

@@ -29,6 +29,7 @@
     const alertPanel = document.getElementById('alertPanel');
     const telegramPanel = document.getElementById('telegramPanel');
     const recipePanel = document.getElementById('recipePanel');
+    const weightPanel = document.getElementById('weightPanel');
     const actionsPanel = document.getElementById('actionsPanel');
     const loginBtn = document.getElementById('loginBtn');
     const loginUser = document.getElementById('loginUser');
@@ -45,6 +46,7 @@
     const recipeRiceEl = document.getElementById('recipeRice');
     const recipePeasEl = document.getElementById('recipePeas');
     const recipeEggEl = document.getElementById('recipeEgg');
+    const targetWeightEl = document.getElementById('targetWeight');
 
     function loadSettings() {
         try {
@@ -95,6 +97,7 @@
         alertPanel.style.display = '';
         telegramPanel.style.display = '';
         recipePanel.style.display = '';
+        weightPanel.style.display = '';
         actionsPanel.style.display = '';
 
         // Load from Firebase first, fallback to localStorage
@@ -117,6 +120,7 @@
         recipeRiceEl.value = recipe.rice;
         recipePeasEl.value = recipe.peas;
         recipeEggEl.value = recipe.egg;
+        targetWeightEl.value = s.targetWeight || '';
     }
 
     function handleSave() {
@@ -129,7 +133,8 @@
                 rice: parseFloat(recipeRiceEl.value) || 0,
                 peas: parseFloat(recipePeasEl.value) || 0,
                 egg: parseFloat(recipeEggEl.value) || 0
-            }
+            },
+            targetWeight: parseFloat(targetWeightEl.value) || null
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 

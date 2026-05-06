@@ -554,6 +554,313 @@ section h2 {
     font-size: 0.75rem;
 }
 
+/* Rupture Info */
+.rupture-info {
+    text-align: center;
+    padding: 8px 0 4px;
+    font-size: 0.85rem;
+}
+
+.rupture-danger {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.rupture-warning {
+    color: var(--warning);
+    font-weight: 500;
+}
+
+.rupture-ok {
+    color: var(--text-light);
+}
+
+/* Shopping List */
+.shopping-section {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.shopping-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.shopping-input-row input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    background: var(--bg-surface);
+    color: var(--text);
+}
+
+.shopping-list {
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+}
+
+.shopping-header {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    color: var(--primary-light);
+}
+
+.shopping-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.shopping-item:last-child {
+    border-bottom: none;
+}
+
+.shopping-amount {
+    font-weight: 600;
+    color: var(--primary-light);
+}
+
+/* Vet Section */
+.vet-section,
+.health-notes-section {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.vet-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.vet-select,
+.vet-input {
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    background: var(--bg-surface);
+    color: var(--text);
+}
+
+.vet-select {
+    cursor: pointer;
+}
+
+.vet-upcoming h3,
+.vet-history h3 {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    margin-top: 12px;
+}
+
+.vet-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    gap: 8px;
+}
+
+.vet-item:last-child {
+    border-bottom: none;
+}
+
+.vet-item.upcoming {
+    color: var(--warning);
+}
+
+.vet-type {
+    font-weight: 600;
+    min-width: 80px;
+    font-size: 0.8rem;
+}
+
+.vet-item .date {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+/* Health Notes */
+.health-note-form {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.health-note-form .vet-input {
+    flex: 1;
+}
+
+.health-note-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.health-note-item:last-child {
+    border-bottom: none;
+}
+
+.health-note-text {
+    flex: 1;
+}
+
+.health-note-item .date {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+/* Calendar */
+.calendar-section {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.calendar-nav span {
+    font-weight: 600;
+    font-size: 0.95rem;
+    min-width: 140px;
+    text-align: center;
+}
+
+.btn-small {
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+    min-width: auto !important;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-header {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 4px 0;
+    text-transform: uppercase;
+}
+
+.cal-empty {
+    padding: 4px;
+}
+
+.cal-day {
+    text-align: center;
+    padding: 6px 2px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    min-height: 38px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.cal-num {
+    font-weight: 500;
+}
+
+.cal-count {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+}
+
+.cal-today {
+    border: 2px solid var(--primary);
+}
+
+.cal-ok {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.cal-partial {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.cal-missed {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-ok {
+    background: var(--success);
+}
+
+.dot-partial {
+    background: var(--warning);
+}
+
+.dot-missed {
+    background: var(--danger);
+}
+
 /* History */
 .history-list {
     max-height: 240px;
