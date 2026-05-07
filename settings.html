@@ -102,6 +102,33 @@
             </div>
         </section>
 
+        <section class="settings-section" id="sharePanel" style="display: none;">
+            <h2>Partilhar (só leitura)</h2>
+            <div class="settings-form">
+                <p class="settings-help">Gera um link temporário para alguém ver os dados do cão sem precisar de conta.</p>
+                <div class="setting-group">
+                    <label>Validade:</label>
+                    <select id="shareDuration" class="vet-select">
+                        <option value="1">1 dia</option>
+                        <option value="3">3 dias</option>
+                        <option value="7" selected>7 dias</option>
+                        <option value="30">30 dias</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <button id="generateShare" class="btn btn-secondary">Gerar Link</button>
+                </div>
+                <div id="shareResult" style="display: none;">
+                    <div class="share-link-box">
+                        <input type="text" id="shareLinkText" readonly class="vet-input" style="font-size: 0.8rem;">
+                        <button id="copyShareLink" class="btn btn-small">Copiar</button>
+                    </div>
+                    <p class="settings-help" id="shareExpiry"></p>
+                </div>
+                <div id="activeSharesList"></div>
+            </div>
+        </section>
+
         <section id="actionsPanel" style="display: none;">
             <div class="setting-group">
                 <button id="saveSettings" class="btn btn-primary">Guardar Configurações</button>

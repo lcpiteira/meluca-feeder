@@ -75,6 +75,7 @@
         recipePanel.style.display = '';
         weightPanel.style.display = '';
         invitePanel.style.display = '';
+        sharePanel.style.display = '';
         actionsPanel.style.display = '';
 
         // Load dog name
@@ -90,6 +91,9 @@
 
         // Load members
         loadMembers();
+
+        // Load active shares
+        loadActiveShares();
     }
 
     function populateFields(s) {
@@ -282,8 +286,105 @@
         setTimeout(function () { toastEl.classList.remove('show'); }, 3000);
     }
 
+    // === Share Link ===
+    var sharePanel = document.getElementById('sharePanel');
+    var shareDurationEl = document.getElementById('shareDuration');
+    var generateShareBtn = document.getElementById('generateShare');
+    var shareResultEl = document.getElementById('shareResult');
+    var shareLinkTextEl = document.getElementById('shareLinkText');
+    var copyShareLinkBtn = document.getElementById('copyShareLink');
+    var shareExpiryEl = document.getElementById('shareExpiry');
+    var activeSharesListEl = document.getElementById('activeSharesList');
+
+    function handleGenerateShare() {
+        var days = parseInt(shareDurationEl.value, 10) || 7;
+        var token = generateShareToken();
+        var expiresAt = Date.now() + (days * 86400000);
+
+        var share = {
+            dogId: currentDogId,
+            createdBy: currentUser.uid,
+            createdAt: Date.now(),
+            expiresAt: expiresAt
+        };
+
+        db.ref('shares/' + token).set(share).then(function () {
+            var baseUrl = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/');
+            var link = baseUrl + 'view.html?t=' + token;
+            shareLinkTextEl.value = link;
+            shareResultEl.style.display = '';
+
+            var expDate = new Date(expiresAt);
+            shareExpiryEl.textContent = 'Expira a ' + expDate.getDate() + '/' + (expDate.getMonth() + 1) + '/' + expDate.getFullYear();
+
+            showToast('Link gerado!');
+            loadActiveShares();
+        });
+    }
+
+    function generateShareToken() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghkmnpqrstuvwxyz23456789';
+        var token = '';
+        for (var i = 0; i < 12; i++) {
+            token += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return token;
+    }
+
+    function handleCopyShareLink() {
+        shareLinkTextEl.select();
+        navigator.clipboard.writeText(shareLinkTextEl.value).then(function () {
+            showToast('Link copiado!');
+        }).catch(function () {
+            document.execCommand('copy');
+            showToast('Link copiado!');
+        });
+    }
+
+    function loadActiveShares() {
+        db.ref('shares').orderByChild('dogId').equalTo(currentDogId).once('value', function (snap) {
+            var shares = snap.val() || {};
+            var now = Date.now();
+            var active = [];
+            Object.keys(shares).forEach(function (token) {
+                var s = shares[token];
+                if (s.expiresAt > now) {
+                    active.push({ token: token, expiresAt: s.expiresAt });
+                }
+            });
+
+            if (active.length === 0) {
+                activeSharesListEl.innerHTML = '';
+                return;
+            }
+
+            var html = '<h3 style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Links activos</h3>';
+            active.forEach(function (s) {
+                var exp = new Date(s.expiresAt);
+                var expStr = exp.getDate() + '/' + (exp.getMonth() + 1) + '/' + exp.getFullYear();
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">' +
+                    '<span style="font-size:0.8rem;color:var(--text-light)">Expira: ' + expStr + '</span>' +
+                    '<button class="btn-revoke-share" data-token="' + s.token + '" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:0.7rem;padding:3px 8px;border-radius:6px;cursor:pointer">Revogar</button>' +
+                    '</div>';
+            });
+            activeSharesListEl.innerHTML = html;
+
+            activeSharesListEl.querySelectorAll('.btn-revoke-share').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var token = btn.getAttribute('data-token');
+                    db.ref('shares/' + token).remove().then(function () {
+                        showToast('Link revogado');
+                        loadActiveShares();
+                    });
+                });
+            });
+        });
+    }
+
     // Events
     saveSettingsBtn.addEventListener('click', handleSave);
     testNotificationBtn.addEventListener('click', handleTestNotification);
     generateInviteBtn.addEventListener('click', handleGenerateInvite);
+    generateShareBtn.addEventListener('click', handleGenerateShare);
+    copyShareLinkBtn.addEventListener('click', handleCopyShareLink);
 })();

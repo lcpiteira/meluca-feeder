@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0f23">
+    <title>MelucaFeeder - Visualização</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+    <div class="app">
+        <!-- Loading -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="login-card">
+                <h1>🐶 MelucaFeeder</h1>
+                <p class="subtitle">A carregar...</p>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div class="login-screen" id="errorScreen" style="display: none;">
+            <div class="login-card">
+                <h1>🔒</h1>
+                <p class="subtitle" id="errorMessage">Link inválido ou expirado.</p>
+                <a href="index.html" class="btn btn-primary" style="margin-top: 16px;">Ir para a app</a>
+            </div>
+        </div>
+
+        <!-- View Content -->
+        <div class="view-main" id="viewMain" style="display: none;">
+            <header>
+                <div class="header-top" style="justify-content: center;">
+                    <h1 id="viewDogName">🐶</h1>
+                </div>
+                <div class="view-badge">Visualização apenas</div>
+            </header>
+
+            <nav class="tabs">
+                <button class="tab active" data-tab="v-dashboard">📊 Dashboard</button>
+                <button class="tab" data-tab="v-weight">⚖️ Peso</button>
+                <button class="tab" data-tab="v-health">🏥 Saúde</button>
+            </nav>
+
+            <!-- Dashboard -->
+            <div class="tab-content active" id="tab-v-dashboard">
+                <section class="stock-section">
+                    <div class="stock-display">
+                        <span class="stock-label">Refeições em stock</span>
+                        <span class="stock-number" id="vStockCount">0</span>
+                        <span class="stock-status" id="vStockStatus"></span>
+                    </div>
+                    <div class="rupture-info" id="vRuptureInfo"></div>
+                </section>
+
+                <section class="history-section">
+                    <h2>Histórico Recente</h2>
+                    <div class="history-list" id="vHistoryList">
+                        <p class="empty-history">Sem registos</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Peso -->
+            <div class="tab-content" id="tab-v-weight">
+                <section class="weight-section">
+                    <h2>Evolução do Peso</h2>
+                    <div class="weight-last" id="vWeightLast"></div>
+                    <div class="weight-chart-container">
+                        <canvas id="vWeightChart" width="400" height="180"></canvas>
+                    </div>
+                    <div class="weight-history" id="vWeightHistory"></div>
+                </section>
+            </div>
+
+            <!-- Saúde -->
+            <div class="tab-content" id="tab-v-health">
+                <section class="vet-section">
+                    <h2>Registo Veterinário</h2>
+                    <div class="vet-upcoming" id="vVetUpcoming"></div>
+                    <div class="vet-history" id="vVetHistory"></div>
+                </section>
+
+                <section class="health-notes-section">
+                    <h2>Notas de Saúde</h2>
+                    <div class="health-notes-list" id="vHealthNotesList"></div>
+                </section>
+            </div>
+
+            <footer>
+                <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                    Link de visualização temporário
+                </p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script src="view.js"></script>
+</body>
+</html>

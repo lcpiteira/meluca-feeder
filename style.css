@@ -265,6 +265,27 @@ body {
     background: var(--primary-glow);
 }
 
+/* View badge */
+.view-badge {
+    display: inline-block;
+    background: var(--warning-light);
+    color: var(--warning);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+}
+
+/* Share link box */
+.share-link-box {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 .login-card {
     background: var(--card);
     border: 1px solid var(--card-border);
