@@ -44,11 +44,13 @@
 
     const profileNameEl = document.getElementById('profileName');
     const profileBreedEl = document.getElementById('profileBreed');
+    const profileBreedBtnEl = document.getElementById('profileBreedBtn');
     const profileBirthdayEl = document.getElementById('profileBirthday');
     const profileBirthdayBtnEl = document.getElementById('profileBirthdayBtn');
     const profileColorEl = document.getElementById('profileColor');
     const profileNeuteredEl = document.getElementById('profileNeutered');
     const profileChipEl = document.getElementById('profileChip');
+    const shareDurationBtnEl = document.getElementById('shareDurationBtn');
 
     const alertThresholdEl = document.getElementById('alertThreshold');
     const telegramTokenEl = document.getElementById('telegramToken');
@@ -123,6 +125,13 @@
     function populateProfile(name, p) {
         profileNameEl.value = name || '';
         profileBreedEl.value = p.breed || '';
+        if (p.breed) {
+            profileBreedBtnEl.textContent = p.breed;
+            profileBreedBtnEl.classList.add('has-value');
+        } else {
+            profileBreedBtnEl.textContent = 'Seleccionar raça';
+            profileBreedBtnEl.classList.remove('has-value');
+        }
         profileBirthdayEl.value = p.birthday || '';
         if (p.birthday) {
             profileBirthdayBtnEl.textContent = formatPickedDate(p.birthday);
@@ -428,6 +437,85 @@
         });
     }
 
+    // === Custom Dropdown ===
+    var BREED_OPTIONS = [
+        'Sem raça definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
+        'Bichon Frisé', 'Border Collie', 'Boxer', 'Braco Alemão', 'Bulldog Francês',
+        'Bulldog Inglês', 'Bull Terrier', 'Caniche', 'Cão de Água Português',
+        'Cão de Castro Laboreiro', 'Cão da Serra da Estrela', 'Cão de Fila de São Miguel',
+        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'Dálmata',
+        'Dobermann', 'Golden Retriever', 'Husky Siberiano', 'Jack Russell Terrier',
+        'Labrador Retriever', 'Lulu da Pomerânia', 'Malinois', 'Maltês', 'Pastor Alemão',
+        'Pequinês', 'Perdigueiro Português', 'Pincher Miniatura', 'Pitbull',
+        'Podengo Português', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
+        'São Bernardo', 'Schnauzer', 'Setter Irlandês', 'Shar Pei', 'Shiba Inu',
+        'Shih Tzu', 'Springer Spaniel', 'Staffordshire Bull Terrier', 'Weimaraner',
+        'West Highland Terrier', 'Whippet', 'Yorkshire Terrier', 'Outro'
+    ];
+
+    var SHARE_DURATION_OPTIONS = [
+        { value: '1', label: '1 dia' },
+        { value: '3', label: '3 dias' },
+        { value: '7', label: '7 dias' },
+        { value: '30', label: '30 dias' }
+    ];
+
+    function showDropdown(title, options, currentValue, onSelect, opts) {
+        opts = opts || {};
+        var overlay = document.getElementById('dropdownOverlay');
+        var titleEl = document.getElementById('dropdownTitle');
+        var searchEl = document.getElementById('dropdownSearch');
+        var optionsEl = document.getElementById('dropdownOptions');
+        var cancelBtn = document.getElementById('dropdownCancel');
+
+        titleEl.textContent = title;
+        overlay.style.display = '';
+
+        var showSearch = opts.searchable !== false && options.length > 6;
+        searchEl.style.display = showSearch ? '' : 'none';
+        searchEl.value = '';
+
+        function renderOptions(filter) {
+            optionsEl.innerHTML = '';
+            var filtered = options.filter(function (opt) {
+                var label = typeof opt === 'string' ? opt : opt.label;
+                if (!filter) return true;
+                return label.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+            });
+
+            filtered.forEach(function (opt) {
+                var value = typeof opt === 'string' ? opt : opt.value;
+                var label = typeof opt === 'string' ? opt : opt.label;
+                var btn = document.createElement('button');
+                btn.className = 'dropdown-option';
+                btn.textContent = label;
+                if (value === currentValue) btn.classList.add('selected');
+                btn.addEventListener('click', function () {
+                    cleanup();
+                    onSelect(value, label);
+                });
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function handleSearch() { renderOptions(searchEl.value); }
+        function cleanup() {
+            overlay.style.display = 'none';
+            searchEl.removeEventListener('input', handleSearch);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
+        }
+        function handleCancel() { cleanup(); }
+        function handleOverlay(e) { if (e.target === overlay) cleanup(); }
+
+        searchEl.addEventListener('input', handleSearch);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
+
+        renderOptions('');
+        if (showSearch) setTimeout(function () { searchEl.focus(); }, 50);
+    }
+
     // === Custom Date Picker ===
     function showDatePicker(onSelect, opts) {
         opts = opts || {};
@@ -535,5 +623,21 @@
             profileBirthdayBtnEl.textContent = formatPickedDate(dateStr);
             profileBirthdayBtnEl.classList.add('has-value');
         }, { initialDate: initDate });
+    });
+
+    profileBreedBtnEl.addEventListener('click', function () {
+        showDropdown('Raça', BREED_OPTIONS, profileBreedEl.value, function (value) {
+            profileBreedEl.value = value;
+            profileBreedBtnEl.textContent = value;
+            profileBreedBtnEl.classList.add('has-value');
+        });
+    });
+
+    shareDurationBtnEl.addEventListener('click', function () {
+        showDropdown('Validade do Link', SHARE_DURATION_OPTIONS, shareDurationEl.value, function (value, label) {
+            shareDurationEl.value = value;
+            shareDurationBtnEl.textContent = label;
+            shareDurationBtnEl.classList.add('has-value');
+        }, { searchable: false });
     });
 })();

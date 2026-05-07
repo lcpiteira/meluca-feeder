@@ -32,61 +32,8 @@
                 </div>
                 <div class="setting-group">
                     <label>Raça:</label>
-                    <select id="profileBreed" class="vet-select">
-                        <option value="">Sem raça</option>
-                        <option value="Sem raça definida">Sem raça definida</option>
-                        <option value="Akita Inu">Akita Inu</option>
-                        <option value="Australian Shepherd">Australian Shepherd</option>
-                        <option value="Basset Hound">Basset Hound</option>
-                        <option value="Beagle">Beagle</option>
-                        <option value="Bichon Frisé">Bichon Frisé</option>
-                        <option value="Border Collie">Border Collie</option>
-                        <option value="Boxer">Boxer</option>
-                        <option value="Braco Alemão">Braco Alemão</option>
-                        <option value="Bulldog Francês">Bulldog Francês</option>
-                        <option value="Bulldog Inglês">Bulldog Inglês</option>
-                        <option value="Bull Terrier">Bull Terrier</option>
-                        <option value="Caniche">Caniche</option>
-                        <option value="Cão de Água Português">Cão de Água Português</option>
-                        <option value="Cão de Castro Laboreiro">Cão de Castro Laboreiro</option>
-                        <option value="Cão da Serra da Estrela">Cão da Serra da Estrela</option>
-                        <option value="Cão de Fila de São Miguel">Cão de Fila de São Miguel</option>
-                        <option value="Cavalier King Charles">Cavalier King Charles</option>
-                        <option value="Chihuahua">Chihuahua</option>
-                        <option value="Cocker Spaniel">Cocker Spaniel</option>
-                        <option value="Dachshund">Dachshund</option>
-                        <option value="Dálmata">Dálmata</option>
-                        <option value="Dobermann">Dobermann</option>
-                        <option value="Golden Retriever">Golden Retriever</option>
-                        <option value="Husky Siberiano">Husky Siberiano</option>
-                        <option value="Jack Russell Terrier">Jack Russell Terrier</option>
-                        <option value="Labrador Retriever">Labrador Retriever</option>
-                        <option value="Lulu da Pomerânia">Lulu da Pomerânia</option>
-                        <option value="Malinois">Malinois</option>
-                        <option value="Maltês">Maltês</option>
-                        <option value="Pastor Alemão">Pastor Alemão</option>
-                        <option value="Pequinês">Pequinês</option>
-                        <option value="Perdigueiro Português">Perdigueiro Português</option>
-                        <option value="Pincher Miniatura">Pincher Miniatura</option>
-                        <option value="Pitbull">Pitbull</option>
-                        <option value="Podengo Português">Podengo Português</option>
-                        <option value="Rafeiro do Alentejo">Rafeiro do Alentejo</option>
-                        <option value="Rottweiler">Rottweiler</option>
-                        <option value="Samoiedo">Samoiedo</option>
-                        <option value="São Bernardo">São Bernardo</option>
-                        <option value="Schnauzer">Schnauzer</option>
-                        <option value="Setter Irlandês">Setter Irlandês</option>
-                        <option value="Shar Pei">Shar Pei</option>
-                        <option value="Shiba Inu">Shiba Inu</option>
-                        <option value="Shih Tzu">Shih Tzu</option>
-                        <option value="Springer Spaniel">Springer Spaniel</option>
-                        <option value="Staffordshire Bull Terrier">Staffordshire Bull Terrier</option>
-                        <option value="Weimaraner">Weimaraner</option>
-                        <option value="West Highland Terrier">West Highland Terrier</option>
-                        <option value="Whippet">Whippet</option>
-                        <option value="Yorkshire Terrier">Yorkshire Terrier</option>
-                        <option value="Outro">Outro</option>
-                    </select>
+                    <button class="custom-dropdown-btn" id="profileBreedBtn">Seleccionar raça</button>
+                    <input type="hidden" id="profileBreed">
                 </div>
                 <div class="setting-group">
                     <label>Sexo:</label>
@@ -199,12 +146,8 @@
                 <p class="settings-help">Gera um link temporário para alguém ver os dados do cão sem precisar de conta.</p>
                 <div class="setting-group">
                     <label>Validade:</label>
-                    <select id="shareDuration" class="vet-select">
-                        <option value="1">1 dia</option>
-                        <option value="3">3 dias</option>
-                        <option value="7" selected>7 dias</option>
-                        <option value="30">30 dias</option>
-                    </select>
+                    <button class="custom-dropdown-btn has-value" id="shareDurationBtn">7 dias</button>
+                    <input type="hidden" id="shareDuration" value="7">
                 </div>
                 <div class="setting-group">
                     <button id="generateShare" class="btn btn-secondary">Gerar Link</button>
@@ -244,6 +187,18 @@
             <div class="dp-grid" id="dpGrid"></div>
             <div class="modal-actions" style="margin-top: 12px;">
                 <button class="btn btn-secondary" id="dpCancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropdown Modal -->
+    <div class="modal-overlay" id="dropdownOverlay" style="display: none;">
+        <div class="modal-card dropdown-modal">
+            <p class="dropdown-modal-title" id="dropdownTitle"></p>
+            <input type="text" class="dropdown-search" id="dropdownSearch" placeholder="Procurar...">
+            <div class="dropdown-options" id="dropdownOptions"></div>
+            <div class="modal-actions" style="margin-top: 12px;">
+                <button class="btn btn-secondary" id="dropdownCancel">Cancelar</button>
             </div>
         </div>
     </div>

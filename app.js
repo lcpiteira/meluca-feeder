@@ -53,6 +53,7 @@
     const backToDogsBtn = document.getElementById('backToDogs');
     const newDogNameEl = document.getElementById('newDogName');
     const newDogBreedEl = document.getElementById('newDogBreed');
+    const newDogBreedBtnEl = document.getElementById('newDogBreedBtn');
     const newDogBirthdayEl = document.getElementById('newDogBirthday');
     const newDogBirthdayBtnEl = document.getElementById('newDogBirthdayBtn');
     const newDogColorEl = document.getElementById('newDogColor');
@@ -93,6 +94,7 @@
     const shoppingBtnEl = document.getElementById('shoppingBtn');
     const shoppingListEl = document.getElementById('shoppingList');
     const vetTypeEl = document.getElementById('vetType');
+    const vetTypeBtnEl = document.getElementById('vetTypeBtn');
     const vetDescEl = document.getElementById('vetDesc');
     const vetDateEl = document.getElementById('vetDate');
     const vetDateBtnEl = document.getElementById('vetDateBtn');
@@ -325,6 +327,8 @@
         db.ref().update(updates).then(function () {
             newDogNameEl.value = '';
             newDogBreedEl.value = '';
+            newDogBreedBtnEl.textContent = 'Raça';
+            newDogBreedBtnEl.classList.remove('has-value');
             newDogBirthdayEl.value = '';
             newDogBirthdayBtnEl.textContent = 'Seleccionar data';
             newDogBirthdayBtnEl.classList.remove('has-value');
@@ -611,6 +615,92 @@
     function formatPickedDate(dateStr) {
         var parts = dateStr.split('-');
         return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
+    // === Custom Dropdown ===
+    var BREED_OPTIONS = [
+        'Sem raça definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
+        'Bichon Frisé', 'Border Collie', 'Boxer', 'Braco Alemão', 'Bulldog Francês',
+        'Bulldog Inglês', 'Bull Terrier', 'Caniche', 'Cão de Água Português',
+        'Cão de Castro Laboreiro', 'Cão da Serra da Estrela', 'Cão de Fila de São Miguel',
+        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'Dálmata',
+        'Dobermann', 'Golden Retriever', 'Husky Siberiano', 'Jack Russell Terrier',
+        'Labrador Retriever', 'Lulu da Pomerânia', 'Malinois', 'Maltês', 'Pastor Alemão',
+        'Pequinês', 'Perdigueiro Português', 'Pincher Miniatura', 'Pitbull',
+        'Podengo Português', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
+        'São Bernardo', 'Schnauzer', 'Setter Irlandês', 'Shar Pei', 'Shiba Inu',
+        'Shih Tzu', 'Springer Spaniel', 'Staffordshire Bull Terrier', 'Weimaraner',
+        'West Highland Terrier', 'Whippet', 'Yorkshire Terrier', 'Outro'
+    ];
+
+    var VET_TYPE_OPTIONS = [
+        { value: 'consulta', label: '🩺 Consulta' },
+        { value: 'vacina', label: '💉 Vacina' },
+        { value: 'desparasitacao', label: '💊 Desparasitação' },
+        { value: 'outro', label: '📋 Outro' }
+    ];
+
+    function showDropdown(title, options, currentValue, onSelect, opts) {
+        opts = opts || {};
+        var overlay = document.getElementById('dropdownOverlay');
+        var titleEl = document.getElementById('dropdownTitle');
+        var searchEl = document.getElementById('dropdownSearch');
+        var optionsEl = document.getElementById('dropdownOptions');
+        var cancelBtn = document.getElementById('dropdownCancel');
+
+        titleEl.textContent = title;
+        overlay.style.display = '';
+
+        var showSearch = opts.searchable !== false && options.length > 6;
+        searchEl.style.display = showSearch ? '' : 'none';
+        searchEl.value = '';
+
+        function renderOptions(filter) {
+            optionsEl.innerHTML = '';
+            var filtered = options.filter(function (opt) {
+                var label = typeof opt === 'string' ? opt : opt.label;
+                if (!filter) return true;
+                return label.toLowerCase().indexOf(filter.toLowerCase()) >= 0;
+            });
+
+            filtered.forEach(function (opt) {
+                var value = typeof opt === 'string' ? opt : opt.value;
+                var label = typeof opt === 'string' ? opt : opt.label;
+                var btn = document.createElement('button');
+                btn.className = 'dropdown-option';
+                btn.textContent = label;
+                if (value === currentValue) btn.classList.add('selected');
+                btn.addEventListener('click', function () {
+                    cleanup();
+                    onSelect(value, label);
+                });
+                optionsEl.appendChild(btn);
+            });
+        }
+
+        function handleSearch() {
+            renderOptions(searchEl.value);
+        }
+
+        function cleanup() {
+            overlay.style.display = 'none';
+            searchEl.removeEventListener('input', handleSearch);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
+        }
+
+        function handleCancel() { cleanup(); }
+        function handleOverlay(e) { if (e.target === overlay) cleanup(); }
+
+        searchEl.addEventListener('input', handleSearch);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
+
+        renderOptions('');
+
+        if (showSearch) {
+            setTimeout(function () { searchEl.focus(); }, 50);
+        }
     }
 
     // === Firebase Listeners (per dog) ===
@@ -996,6 +1086,22 @@
             if (e.key === 'Enter') handleHealthNote();
         });
 
+        // Dropdown buttons
+        newDogBreedBtnEl.addEventListener('click', function () {
+            showDropdown('Raça', BREED_OPTIONS, newDogBreedEl.value, function (value) {
+                newDogBreedEl.value = value;
+                newDogBreedBtnEl.textContent = value;
+                newDogBreedBtnEl.classList.add('has-value');
+            });
+        });
+        vetTypeBtnEl.addEventListener('click', function () {
+            showDropdown('Tipo de Registo', VET_TYPE_OPTIONS, vetTypeEl.value, function (value, label) {
+                vetTypeEl.value = value;
+                vetTypeBtnEl.textContent = label;
+                vetTypeBtnEl.classList.add('has-value');
+            }, { searchable: false });
+        });
+
         // Date picker buttons
         newDogBirthdayBtnEl.addEventListener('click', function () {
             showDatePicker(function (dateStr) {
@@ -1192,6 +1298,8 @@
         vetNextDateEl.value = '';
         vetNextDateBtnEl.textContent = 'Seleccionar data';
         vetNextDateBtnEl.classList.remove('has-value');
+        vetTypeEl.value = 'consulta';
+        vetTypeBtnEl.textContent = '🩺 Consulta';
         // Reset date to today
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;

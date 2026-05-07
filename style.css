@@ -261,7 +261,8 @@ body {
 }
 
 .dog-form-row .vet-input,
-.dog-form-row .vet-select {
+.dog-form-row .vet-select,
+.dog-form-row .custom-dropdown-btn {
     width: 100%;
     box-sizing: border-box;
 }
@@ -1110,6 +1111,99 @@ section h2 {
 
 .vet-select {
     cursor: pointer;
+}
+
+/* Custom Dropdown */
+.custom-dropdown-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.custom-dropdown-btn::after {
+    content: '▾';
+    font-size: 0.7rem;
+    margin-left: 8px;
+    color: var(--text-muted);
+}
+
+.custom-dropdown-btn:hover {
+    border-color: var(--primary);
+}
+
+.custom-dropdown-btn.has-value {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.dropdown-modal {
+    max-width: 340px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.dropdown-modal-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.dropdown-search {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    background: var(--bg-surface);
+    color: var(--text);
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+.dropdown-search::placeholder {
+    color: var(--text-muted);
+}
+
+.dropdown-options {
+    overflow-y: auto;
+    max-height: 50vh;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dropdown-option {
+    padding: 10px 14px;
+    border: none;
+    background: none;
+    color: var(--text);
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
+}
+
+.dropdown-option:hover {
+    background: var(--primary-glow);
+}
+
+.dropdown-option.selected {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
 }
 
 .vet-upcoming h3,
