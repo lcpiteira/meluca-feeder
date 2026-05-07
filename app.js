@@ -3255,6 +3255,160 @@
         'heat-prediction': 'Com base no histórico de ciclos de cio desta cadela, analisa a regularidade dos ciclos, prevê a data aproximada do próximo cio, e dá dicas de preparação.'
     };
 
+    // === Gemini Function Calling (Agentic) ===
+    var GEMINI_TOOLS = [{
+        functionDeclarations: [
+            {
+                name: 'addWeightRecord',
+                description: 'Registar o peso da cadela. Usa quando o utilizador menciona um peso novo.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        weight: { type: 'NUMBER', description: 'Peso em kg' },
+                        date: { type: 'STRING', description: 'Data no formato YYYY-MM-DD. Se não indicada, usar a data de hoje.' }
+                    },
+                    required: ['weight']
+                }
+            },
+            {
+                name: 'addHealthNote',
+                description: 'Adicionar uma nota de saúde sobre a cadela. Usa quando o utilizador reporta sintomas, observações ou acontecimentos de saúde.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        text: { type: 'STRING', description: 'Texto da nota de saúde' }
+                    },
+                    required: ['text']
+                }
+            },
+            {
+                name: 'addVetRecord',
+                description: 'Registar uma consulta, vacina, desparasitação ou outro evento veterinário.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        type: { type: 'STRING', description: 'Tipo: vaccine, deworming, checkup, surgery, analysis, other', enum: ['vaccine', 'deworming', 'checkup', 'surgery', 'analysis', 'other'] },
+                        description: { type: 'STRING', description: 'Descrição do evento veterinário' },
+                        date: { type: 'STRING', description: 'Data no formato YYYY-MM-DD' },
+                        clinic: { type: 'STRING', description: 'Nome da clínica veterinária (opcional)' },
+                        cost: { type: 'NUMBER', description: 'Custo em euros (opcional)' },
+                        notes: { type: 'STRING', description: 'Notas adicionais (opcional)' }
+                    },
+                    required: ['type', 'description', 'date']
+                }
+            },
+            {
+                name: 'startHeatCycle',
+                description: 'Registar o início de um ciclo de cio.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        date: { type: 'STRING', description: 'Data de início no formato YYYY-MM-DD' }
+                    },
+                    required: ['date']
+                }
+            },
+            {
+                name: 'endHeatCycle',
+                description: 'Registar o fim do ciclo de cio activo.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        date: { type: 'STRING', description: 'Data de fim no formato YYYY-MM-DD' }
+                    },
+                    required: ['date']
+                }
+            },
+            {
+                name: 'getWeightHistory',
+                description: 'Obter o histórico completo de pesos registados.',
+                parameters: { type: 'OBJECT', properties: {} }
+            },
+            {
+                name: 'getVetHistory',
+                description: 'Obter o histórico completo de registos veterinários.',
+                parameters: { type: 'OBJECT', properties: {} }
+            },
+            {
+                name: 'getHealthNotes',
+                description: 'Obter todas as notas de saúde registadas.',
+                parameters: { type: 'OBJECT', properties: {} }
+            },
+            {
+                name: 'getHeatCycles',
+                description: 'Obter o histórico completo de ciclos de cio.',
+                parameters: { type: 'OBJECT', properties: {} }
+            },
+            {
+                name: 'getDogInfo',
+                description: 'Obter informação geral da cadela: nome, alimentação, peso actual, stock de refeições.',
+                parameters: { type: 'OBJECT', properties: {} }
+            }
+        ]
+    }];
+
+    function executeToolCall(name, args) {
+        var today = new Date().toISOString().slice(0, 10);
+        switch (name) {
+            case 'addWeightRecord': {
+                var w = parseFloat(args.weight);
+                if (isNaN(w) || w <= 0) return { success: false, error: 'Peso inválido' };
+                var d = args.date || today;
+                if (db && currentDogId) dogRef('weight').push({ weight: w, date: new Date(d).toISOString() });
+                return { success: true, weight: w, date: d };
+            }
+            case 'addHealthNote': {
+                var text = (args.text || '').trim();
+                if (!text) return { success: false, error: 'Texto vazio' };
+                if (db && currentDogId) dogRef('healthNotes').push({ text: text, date: new Date().toISOString() });
+                return { success: true, text: text };
+            }
+            case 'addVetRecord': {
+                var entry = {
+                    type: args.type || 'other',
+                    description: args.description || '',
+                    date: args.date || today,
+                    nextDate: null,
+                    clinic: args.clinic || null,
+                    cost: args.cost ? parseFloat(args.cost) : null,
+                    notes: args.notes || null,
+                    recurrence: null,
+                    reminderDays: 0,
+                    createdAt: new Date().toISOString()
+                };
+                if (!entry.description) return { success: false, error: 'Descrição em falta' };
+                if (db && currentDogId) dogRef('vet').push(entry);
+                return { success: true, type: entry.type, description: entry.description, date: entry.date };
+            }
+            case 'startHeatCycle': {
+                var sd = args.date || today;
+                var active = heatCycles.find(function (c) { return !c.endDate; });
+                if (active) return { success: false, error: 'Já existe um ciclo de cio activo desde ' + active.startDate };
+                if (db && currentDogId) dogRef('heatCycles').push({ startDate: sd, endDate: null });
+                return { success: true, startDate: sd };
+            }
+            case 'endHeatCycle': {
+                var ed = args.date || today;
+                var activeCycle = heatCycles.find(function (c) { return !c.endDate; });
+                if (!activeCycle) return { success: false, error: 'Nenhum ciclo de cio activo para terminar' };
+                if (db && currentDogId) dogRef('heatCycles/' + activeCycle.id + '/endDate').set(ed);
+                return { success: true, endDate: ed };
+            }
+            case 'getWeightHistory':
+                return { records: weightData.map(function (w) { return { weight: w.weight, date: w.date }; }) };
+            case 'getVetHistory':
+                return { records: vetData.map(function (v) { return { type: v.type, description: v.description, date: v.date, clinic: v.clinic, cost: v.cost }; }) };
+            case 'getHealthNotes':
+                return { notes: healthNotes.map(function (n) { return { text: n.text, date: n.date }; }) };
+            case 'getHeatCycles':
+                return { cycles: heatCycles.map(function (c) { return { startDate: c.startDate, endDate: c.endDate }; }) };
+            case 'getDogInfo':
+                return { context: buildDogContext() };
+            default:
+                return { error: 'Função desconhecida: ' + name };
+        }
+    }
+
     function showAiFab() {
         if (aiFabEl) aiFabEl.style.display = 'flex';
     }
@@ -3326,7 +3480,7 @@
         }
 
         var context = buildDogContext();
-        var systemPrompt = 'És um assistente veterinário virtual integrado na app MelucaFeeder. Respondes em português de Portugal (PT-PT). Sê conciso, prático e amigável. Não uses markdown. Usa parágrafos curtos. Nunca recomendas medicação sem consulta veterinária.';
+        var systemPrompt = 'És um assistente veterinário virtual integrado na app MelucaFeeder. Respondes em português de Portugal (PT-PT). Sê conciso, prático e amigável. Não uses markdown. Usa parágrafos curtos. Nunca recomendas medicação sem consulta veterinária.\n\nA data de hoje é: ' + new Date().toISOString().slice(0, 10) + '.\n\nTens acesso a ferramentas para registar dados (peso, notas de saúde, consultas veterinárias, ciclos de cio) e para consultar histórico. Quando o utilizador pedir para registar algo, usa a ferramenta apropriada. Quando precisares de dados detalhados, consulta primeiro com as ferramentas de leitura. Após executar uma acção, confirma ao utilizador o que fizeste.';
         var fullPrompt = 'Contexto da cadela:\n' + context + '\n\nPedido: ' + userPrompt;
 
         addLoadingMessage();
@@ -3334,41 +3488,85 @@
 
         var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + geminiApiKey;
 
-        fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                system_instruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ parts: [{ text: fullPrompt }] }],
-                generationConfig: {
-                    temperature: 0.7,
-                    maxOutputTokens: 2048
+        var conversationContents = [{ role: 'user', parts: [{ text: fullPrompt }] }];
+
+        function geminiRequest(contents) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system_instruction: { parts: [{ text: systemPrompt }] },
+                    contents: contents,
+                    tools: GEMINI_TOOLS,
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 2048
+                    }
+                })
+            }).then(function (res) {
+                if (!res.ok) {
+                    return res.json().then(function (errData) {
+                        var msg = errData && errData.error && errData.error.message ? errData.error.message : 'Erro ' + res.status;
+                        throw new Error(msg);
+                    });
                 }
-            })
-        })
-        .then(function (res) {
-            if (!res.ok) {
-                return res.json().then(function (errData) {
-                    var msg = errData && errData.error && errData.error.message ? errData.error.message : 'Erro ' + res.status;
-                    throw new Error(msg);
-                });
+                return res.json();
+            });
+        }
+
+        function processResponse(data) {
+            var candidate = data.candidates && data.candidates[0];
+            if (!candidate || !candidate.content || !candidate.content.parts) {
+                throw new Error('Resposta vazia do Gemini');
             }
-            return res.json();
-        })
-        .then(function (data) {
-            removeLoadingMessage();
-            var text = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+
+            var parts = candidate.content.parts;
+            var functionCalls = parts.filter(function (p) { return p.functionCall; });
+
+            // Add model response to conversation
+            conversationContents.push({ role: 'model', parts: parts });
+
+            if (functionCalls.length > 0) {
+                // Execute all function calls and collect results
+                var functionResponses = functionCalls.map(function (part) {
+                    var fc = part.functionCall;
+                    var result = executeToolCall(fc.name, fc.args || {});
+                    return {
+                        functionResponse: {
+                            name: fc.name,
+                            response: result
+                        }
+                    };
+                });
+
+                // Add function results to conversation
+                conversationContents.push({ role: 'function', parts: functionResponses });
+
+                // Call Gemini again with the results
+                return geminiRequest(conversationContents).then(processResponse);
+            }
+
+            // No function calls — extract text response
+            var textParts = parts.filter(function (p) { return p.text; });
+            var text = textParts.map(function (p) { return p.text; }).join('\n');
             if (!text) throw new Error('Resposta vazia do Gemini');
-            addChatMessage(text, 'bot');
-        })
-        .catch(function (err) {
-            removeLoadingMessage();
-            addChatMessage(err.message, 'error');
-        })
-        .finally(function () {
-            setAiInputDisabled(false);
-            aiCustomPromptEl.focus();
-        });
+            return text;
+        }
+
+        geminiRequest(conversationContents)
+            .then(processResponse)
+            .then(function (text) {
+                removeLoadingMessage();
+                addChatMessage(text, 'bot');
+            })
+            .catch(function (err) {
+                removeLoadingMessage();
+                addChatMessage(err.message, 'error');
+            })
+            .finally(function () {
+                setAiInputDisabled(false);
+                aiCustomPromptEl.focus();
+            });
     }
 
     // === Start ===
