@@ -649,19 +649,9 @@
             }, mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeições)');
         }
 
-        function skipWizard() {
-            var updates = {};
-            updates['dogs/' + dogId + '/onboarding'] = null;
-            updates['dogs/' + dogId + '/onboardingComplete'] = true;
-            db.ref().update(updates);
-            overlay.style.display = 'none';
-            showToast('Podes configurar mais tarde nas definições');
-        }
-
         // Bind events
         document.getElementById('setupModeHomemade').onclick = function () { setWizardMode('homemade'); };
         document.getElementById('setupModeKibble').onclick = function () { setWizardMode('kibble'); };
-        document.getElementById('setupSkip').onclick = skipWizard;
 
         // Profile step: breed dropdown + date picker + radio/checkbox interactivity
         document.getElementById('setupBreedBtn').onclick = function () {
