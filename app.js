@@ -17,8 +17,8 @@
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
     const MAX_AUTO_DEDUCTIONS = 4;
-    const GEMINI_API_KEY = 'AIzaSyAJv2LlAedlTNGVtI00B5eBSRVxJiuOHsQ';
     const GEMINI_MODEL = 'gemini-2.5-flash';
+    var geminiApiKey = null;
 
     var INGREDIENT_POOL = [
         { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
@@ -194,6 +194,11 @@
         firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.database();
         auth = firebase.auth();
+
+        // Load Gemini API key from DB
+        db.ref('config/geminiApiKey').once('value', function (snap) {
+            geminiApiKey = snap.val() || null;
+        });
 
         // Persist session across browser restarts (user stays logged in until explicit logout)
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
@@ -3315,6 +3320,11 @@
     }
 
     function askGemini(userPrompt) {
+        if (!geminiApiKey) {
+            addChatMessage('API key do Gemini não configurada na base de dados.', 'error');
+            return;
+        }
+
         var context = buildDogContext();
         var systemPrompt = 'És um assistente veterinário virtual integrado na app MelucaFeeder. Respondes em português de Portugal (PT-PT). Sê conciso, prático e amigável. Não uses markdown. Usa parágrafos curtos. Nunca recomendas medicação sem consulta veterinária.';
         var fullPrompt = 'Contexto da cadela:\n' + context + '\n\nPedido: ' + userPrompt;
@@ -3322,7 +3332,7 @@
         addLoadingMessage();
         setAiInputDisabled(true);
 
-        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + geminiApiKey;
 
         fetch(url, {
             method: 'POST',
