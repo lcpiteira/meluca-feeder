@@ -815,6 +815,14 @@
         return parts[2] + '/' + parts[1] + '/' + parts[0];
     }
 
+    // Collapsible sections
+    document.querySelectorAll('[data-toggle-section]').forEach(function (header) {
+        header.addEventListener('click', function () {
+            var section = header.closest('.settings-section');
+            if (section) section.classList.toggle('collapsed');
+        });
+    });
+
     // Events
     saveSettingsBtn.addEventListener('click', handleSave);
     testNotificationBtn.addEventListener('click', handleTestNotification);

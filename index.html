@@ -106,7 +106,10 @@
         <!-- Main App (hidden until authenticated + dog selected) -->
         <div class="app-main" id="appMain" style="display: none;">
             <header>
-                <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">🌙</button>
+                <div class="header-actions">
+                    <a href="settings.html" class="header-icon-btn" id="settingsBtn" aria-label="Configurações">⚙️</a>
+                    <button class="header-icon-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
+                </div>
                 <div class="header-top">
                     <button class="btn-back" id="backToDogs" aria-label="Voltar aos cães">← </button>
                     <div class="header-dog-info">
@@ -132,6 +135,24 @@
 
             <!-- Tab: Dashboard -->
             <div class="tab-content active" id="tab-dashboard">
+                <div class="feeding-summary-card" id="feedingSummaryCard">
+                    <div class="feeding-summary-info">
+                        <span class="feeding-summary-icon" id="feedingSummaryIcon">🍳</span>
+                        <div class="feeding-summary-text">
+                            <span class="feeding-summary-mode" id="feedingSummaryMode">Caseira</span>
+                            <span class="feeding-summary-detail" id="feedingSummaryDetail"></span>
+                        </div>
+                    </div>
+                    <a href="settings.html" class="feeding-summary-edit">Editar</a>
+                </div>
+
+                <div class="welcome-card" id="welcomeCard" style="display: none;">
+                    <div class="welcome-card-icon">🎉</div>
+                    <h2>Tudo pronto para começar!</h2>
+                    <p>Configura o tipo de alimentação e a receita ou ração do teu cão para tirar o máximo partido da app.</p>
+                    <a href="settings.html" class="btn btn-primary">Configurar Alimentação</a>
+                </div>
+
                 <section class="stock-section">
                     <div class="stock-display">
                         <span class="stock-label">Refeições em stock</span>
@@ -215,6 +236,10 @@
 
             <!-- Tab: Preparação -->
             <div class="tab-content" id="tab-prep">
+                <div class="prep-cta" id="prepCta" style="display: none;">
+                    <p>A receita ainda não está configurada. Define os ingredientes para poderes calcular refeições e gerar listas de compras.</p>
+                    <a href="settings.html" class="btn btn-primary">Configurar Receita</a>
+                </div>
                 <!-- Homemade mode -->
                 <div id="prepHomemade">
                     <section class="calculator-section">
@@ -356,12 +381,75 @@
         <footer>
             <span class="sync-status" id="syncStatus">○ Apenas local</span>
             <p>MelucaFeeder &mdash; Última actualização: <span id="lastUpdate">--</span></p>
-            <a href="settings.html" class="settings-link">⚙️ Configurações</a>
         </footer>
         </div><!-- /app-main -->
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Setup Wizard Modal -->
+    <div class="setup-wizard-overlay" id="setupWizardOverlay" style="display: none;">
+        <div class="setup-wizard">
+            <div class="setup-wizard-header">
+                <h2>🐶 Configuração rápida</h2>
+                <p>Configura a alimentação em 2 passos</p>
+            </div>
+            <div class="setup-progress" id="setupProgress">
+                <span class="setup-progress-dot active"></span>
+                <span class="setup-progress-dot"></span>
+            </div>
+
+            <!-- Step 1: Feeding mode -->
+            <div class="setup-step active" id="setupStep1">
+                <h3>Tipo de alimentação</h3>
+                <div class="feeding-mode-toggle" style="margin-bottom: 16px;">
+                    <button class="feeding-mode-btn active" data-mode="homemade" id="setupModeHomemade">🍳 Caseira</button>
+                    <button class="feeding-mode-btn" data-mode="kibble" id="setupModeKibble">🥣 Ração</button>
+                </div>
+                <div class="setup-step-actions">
+                    <button class="btn btn-secondary" id="setupSkip">Saltar</button>
+                    <button class="btn btn-primary" id="setupNext1">Seguinte →</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Recipe (homemade) or Kibble config -->
+            <div class="setup-step" id="setupStep2">
+                <!-- Homemade sub-step -->
+                <div id="setupHomemadeConfig">
+                    <h3>Receita por refeição</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">Podes ajustar as quantidades nas configurações a qualquer momento.</p>
+                    <div id="setupRecipeList" class="recipe-ingredients-list"></div>
+                </div>
+                <!-- Kibble sub-step -->
+                <div id="setupKibbleConfig" style="display: none;">
+                    <h3>Configuração da ração</h3>
+                    <div class="settings-form">
+                        <div class="setting-group">
+                            <label>Marca:</label>
+                            <button class="custom-dropdown-btn" id="setupKibbleBrandBtn">Seleccionar marca</button>
+                            <input type="hidden" id="setupKibbleBrand">
+                        </div>
+                        <div class="setting-group">
+                            <label>Gramas por refeição:</label>
+                            <input type="number" id="setupKibbleAmount" min="1" step="5" value="150" class="vet-input">
+                        </div>
+                        <div class="setting-group">
+                            <label>Refeições por dia:</label>
+                            <input type="number" id="setupKibbleMeals" min="1" max="6" step="1" value="2" class="vet-input">
+                        </div>
+                        <div class="setting-group">
+                            <label>Tamanho da saca (kg):</label>
+                            <input type="number" id="setupKibbleBagSize" min="0.5" step="0.5" value="12" class="vet-input">
+                        </div>
+                    </div>
+                </div>
+                <div class="setup-step-actions">
+                    <button class="btn btn-secondary" id="setupBack2">← Voltar</button>
+                    <button class="btn btn-primary" id="setupFinish">Concluir ✓</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Confirm Modal -->
     <div class="modal-overlay" id="modalOverlay" style="display: none;">

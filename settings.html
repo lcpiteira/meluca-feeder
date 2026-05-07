@@ -24,7 +24,11 @@
 
         <!-- Settings (shown when authenticated) -->
         <section class="settings-section" id="profilePanel" style="display: none;">
-            <h2>Perfil do Cão</h2>
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Perfil do Cão</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <div class="settings-form">
                 <div class="setting-group">
                     <label>Nome:</label>
@@ -62,60 +66,41 @@
                     <input type="text" id="profileChip" placeholder="Opcional" class="vet-input">
                 </div>
             </div>
-        </section>
-
-        <section class="settings-section" id="alertPanel" style="display: none;">
-            <h2>Alertas</h2>
-            <div class="settings-form">
-                <div class="setting-group">
-                    <label>Alerta quando stock atingir:</label>
-                    <input type="number" id="alertThreshold" min="1" value="5">
-                    <span>refeições</span>
-                </div>
-            </div>
-        </section>
-
-        <section class="settings-section" id="telegramPanel" style="display: none;">
-            <h2>Notificações (Telegram)</h2>
-            <div class="settings-form">
-                <div class="setting-group">
-                    <label>Telegram Bot Token:</label>
-                    <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
-                </div>
-                <div class="setting-group">
-                    <label>Telegram Chat ID(s):</label>
-                    <input type="text" id="telegramChatId" placeholder="-1001234567890, -1009876543210">
-                </div>
-                <div class="setting-group">
-                    <button id="testNotification" class="btn btn-small">Testar Notificação</button>
-                </div>
-                <p class="settings-help">
-                    Cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
-                    obtém o token, e envia uma mensagem ao bot. Depois usa 
-                    <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
-                    para descobrir o teu Chat ID. Para enviar para múltiplas pessoas, separa os IDs por vírgula.
-                </p>
             </div>
         </section>
 
         <section class="settings-section" id="feedingPanel" style="display: none;">
-            <h2>Alimentação</h2>
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Alimentação</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <p class="section-desc">Define o tipo de alimentação do cão.</p>
             <div class="feeding-mode-toggle">
                 <button class="feeding-mode-btn active" data-mode="homemade">🍳 Caseira</button>
                 <button class="feeding-mode-btn" data-mode="kibble">🥣 Ração</button>
             </div>
+            </div>
         </section>
 
         <section class="settings-section" id="recipePanel" style="display: none;">
-            <h2>Receita (por refeição)</h2>
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Receita (por refeição)</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <p class="section-desc">Define os ingredientes e quantidades por refeição.</p>
             <div id="recipeIngredients" class="recipe-ingredients-list"></div>
             <button id="addIngredientBtn" class="btn btn-outline recipe-add-btn">+ Adicionar ingrediente</button>
+            </div>
         </section>
 
         <section class="settings-section" id="kibblePanel" style="display: none;">
-            <h2>Ração</h2>
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Ração</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <p class="section-desc">Configura o tipo e quantidade de ração por refeição.</p>
             <div class="settings-form">
                 <div class="setting-group">
@@ -151,10 +136,59 @@
                     <input type="number" id="kibbleBagSize" min="0.5" step="0.5" value="12" class="vet-input">
                 </div>
             </div>
+            </div>
         </section>
 
-        <section class="settings-section" id="weightPanel" style="display: none;">
-            <h2>Objectivo de Peso</h2>
+        <section class="settings-section collapsed" id="alertPanel" style="display: none;">
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Alertas</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Alerta quando stock atingir:</label>
+                    <input type="number" id="alertThreshold" min="1" value="5">
+                    <span>refeições</span>
+                </div>
+            </div>
+            </div>
+        </section>
+
+        <section class="settings-section collapsed" id="telegramPanel" style="display: none;">
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Notificações (Telegram)</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Telegram Bot Token:</label>
+                    <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
+                </div>
+                <div class="setting-group">
+                    <label>Telegram Chat ID(s):</label>
+                    <input type="text" id="telegramChatId" placeholder="-1001234567890, -1009876543210">
+                </div>
+                <div class="setting-group">
+                    <button id="testNotification" class="btn btn-small">Testar Notificação</button>
+                </div>
+                <p class="settings-help">
+                    Cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
+                    obtém o token, e envia uma mensagem ao bot. Depois usa 
+                    <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
+                    para descobrir o teu Chat ID. Para enviar para múltiplas pessoas, separa os IDs por vírgula.
+                </p>
+            </div>
+            </div>
+        </section>
+
+        <section class="settings-section collapsed" id="weightPanel" style="display: none;">
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Objectivo de Peso</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <div class="settings-form">
                 <div class="setting-group">
                     <label>Peso alvo (kg):</label>
@@ -162,10 +196,15 @@
                 </div>
                 <p class="settings-help">Define o peso ideal. Uma linha tracejada será desenhada no gráfico de peso.</p>
             </div>
+            </div>
         </section>
 
-        <section class="settings-section" id="invitePanel" style="display: none;">
-            <h2>Convidar Membros</h2>
+        <section class="settings-section collapsed" id="invitePanel" style="display: none;">
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Convidar Membros</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <div class="settings-form">
                 <p class="settings-help">Gera um código de convite para outros users se juntarem à gestão deste cão.</p>
                 <div class="setting-group">
@@ -174,10 +213,15 @@
                 </div>
                 <div id="membersList"></div>
             </div>
+            </div>
         </section>
 
-        <section class="settings-section" id="sharePanel" style="display: none;">
-            <h2>Partilhar (só leitura)</h2>
+        <section class="settings-section collapsed" id="sharePanel" style="display: none;">
+            <div class="settings-section-header" data-toggle-section>
+                <h2>Partilhar (só leitura)</h2>
+                <span class="settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-section-body">
             <div class="settings-form">
                 <p class="settings-help">Gera um link temporário para alguém ver os dados do cão sem precisar de conta.</p>
                 <div class="setting-group">
@@ -196,6 +240,7 @@
                     <p class="settings-help" id="shareExpiry"></p>
                 </div>
                 <div id="activeSharesList"></div>
+            </div>
             </div>
         </section>
 
