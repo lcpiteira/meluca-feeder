@@ -433,7 +433,7 @@
 
         var rd = resumeData || {};
         var wizardMode = rd.mode || 'homemade';
-        var selectedIngredients = rd.ingredients ? rd.ingredients.slice() : ['chicken', 'rice', 'peas', 'egg'];
+        var selectedIngredients = rd.ingredients ? rd.ingredients.slice() : [];
         var wizardRecipe = rd.recipe ? rd.recipe.slice() : [];
         var currentStepId = rd.step || 'setupStep1';
         var allStepEls = overlay.querySelectorAll('.setup-step');
