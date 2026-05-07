@@ -2634,6 +2634,37 @@ footer {
     footer {
         padding: 20px 12px;
     }
+
+    /* Wizard responsiveness */
+    .setup-wizard {
+        padding: 20px 16px;
+        max-height: 95vh;
+    }
+
+    .setup-wizard-overlay {
+        padding: 8px;
+        align-items: flex-start;
+        padding-top: env(safe-area-inset-top, 8px);
+    }
+
+    .dog-form-half {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .setup-ingredient-grid {
+        grid-template-columns: repeat(3, 1fr);
+        max-height: 280px;
+    }
+
+    .setup-ing-card {
+        padding: 10px 4px;
+        font-size: 0.7rem;
+    }
+
+    .setup-ing-card-icon {
+        font-size: 1.2rem;
+    }
 }
 
 /* Very small devices */
@@ -2657,6 +2688,27 @@ footer {
     .btn {
         padding: 12px 14px;
         font-size: 0.85rem;
+    }
+
+    .setup-wizard {
+        padding: 16px 12px;
+    }
+
+    .setup-wizard-header h2 {
+        font-size: 1rem;
+    }
+
+    .setup-ingredient-grid {
+        grid-template-columns: repeat(2, 1fr);
+        max-height: 260px;
+    }
+
+    .recipe-ingredient-row {
+        gap: 6px;
+    }
+
+    .recipe-ing-amount {
+        width: 56px;
     }
 }
 
