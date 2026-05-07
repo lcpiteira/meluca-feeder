@@ -266,10 +266,10 @@
             upcomingEl.innerHTML = '';
         }
 
-        if (list.length === 0) {
+        if (past.length === 0) {
             histEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
         } else {
-            histEl.innerHTML = list.slice(0, 15).map(function (e) {
+            histEl.innerHTML = past.slice(0, 15).map(function (e) {
                 var typeIcons = { consulta: '🩺', vacina: '💉', desparasitacao: '💊', outro: '📋' };
                 var icon = typeIcons[e.type] || '📋';
                 return '<div class="vet-item"><span>' + icon + ' ' + escapeHtml(e.description || '') + '</span><span>' + formatDate(new Date(e.date)) + '</span></div>';
