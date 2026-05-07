@@ -4,6 +4,32 @@
     box-sizing: border-box;
 }
 
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+/* Hide number input spinners globally */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 :root {
     --primary: #6366f1;
     --primary-light: #818cf8;
@@ -2336,6 +2362,8 @@ footer {
     max-width: 420px;
     max-height: 90vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
     box-shadow: var(--shadow-lg);
 }
 
@@ -2419,6 +2447,8 @@ footer {
     gap: 8px;
     max-height: 340px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
     padding: 2px;
 }
 

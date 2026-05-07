@@ -397,6 +397,37 @@
         if (!overlay) return;
         overlay.style.display = '';
 
+        // Reset all wizard form fields to blank state
+        var breedBtn = document.getElementById('setupBreedBtn');
+        var breedInput = document.getElementById('setupBreed');
+        var birthdayBtn = document.getElementById('setupBirthdayBtn');
+        var birthdayInput = document.getElementById('setupBirthday');
+        if (breedBtn) { breedBtn.textContent = 'Raça'; breedBtn.classList.remove('has-value'); }
+        if (breedInput) breedInput.value = '';
+        if (birthdayBtn) { birthdayBtn.textContent = 'Seleccionar data'; birthdayBtn.classList.remove('has-value'); }
+        if (birthdayInput) birthdayInput.value = '';
+        var colorEl = document.getElementById('setupColor');
+        var chipEl = document.getElementById('setupChip');
+        var neuteredEl = document.getElementById('setupNeutered');
+        if (colorEl) colorEl.value = '';
+        if (chipEl) chipEl.value = '';
+        if (neuteredEl) { neuteredEl.checked = false; var lbl = neuteredEl.closest('.dog-checkbox-label'); if (lbl) lbl.classList.remove('checked'); }
+        document.querySelectorAll('input[name="setupSex"]').forEach(function (r) { r.checked = false; r.closest('.dog-radio-label').classList.remove('selected'); });
+        var kibbleBrandBtn = document.getElementById('setupKibbleBrandBtn');
+        if (kibbleBrandBtn) { kibbleBrandBtn.textContent = 'Seleccionar marca'; kibbleBrandBtn.classList.remove('has-value'); }
+        var kibbleBrand = document.getElementById('setupKibbleBrand');
+        if (kibbleBrand) kibbleBrand.value = '';
+        var kibbleAmount = document.getElementById('setupKibbleAmount');
+        if (kibbleAmount) kibbleAmount.value = '150';
+        var kibbleMeals = document.getElementById('setupKibbleMeals');
+        if (kibbleMeals) kibbleMeals.value = '2';
+        var kibbleBagSize = document.getElementById('setupKibbleBagSize');
+        if (kibbleBagSize) kibbleBagSize.value = '12';
+        var kibbleCurrentKg = document.getElementById('setupKibbleCurrentKg');
+        if (kibbleCurrentKg) kibbleCurrentKg.value = '0';
+        var homemadeStock = document.getElementById('setupHomemadeStock');
+        if (homemadeStock) homemadeStock.value = '0';
+
         // Get dog name for subtitle
         db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
             var sub = document.getElementById('setupSubtitle');
