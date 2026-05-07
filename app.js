@@ -300,6 +300,7 @@
         // Create dog
         updates['dogs/' + dogId + '/name'] = 'Meluca';
         updates['dogs/' + dogId + '/createdBy'] = user.uid;
+        updates['dogs/' + dogId + '/onboardingComplete'] = true;
         updates['dogs/' + dogId + '/members/' + user.uid] = { role: 'owner', name: user.displayName || user.email };
         updates['dogs/' + dogId + '/state'] = legacyState;
 
@@ -367,6 +368,7 @@
         updates['dogs/' + dogId + '/name'] = name;
         updates['dogs/' + dogId + '/profile'] = profile;
         updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
+        updates['dogs/' + dogId + '/onboardingComplete'] = false;
         updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
         updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
         updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', feedingMode: 'homemade', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }], kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2 } };
@@ -392,19 +394,20 @@
             showToast(name + ' criado!');
             // Auto-select and show wizard
             selectDog(dogId);
-            showSetupWizard(dogId);
         });
     }
 
     // === Setup Wizard ===
-    function showSetupWizard(dogId) {
+    function showSetupWizard(dogId, resumeData) {
         var overlay = document.getElementById('setupWizardOverlay');
         if (!overlay) return;
         overlay.style.display = '';
 
-        var wizardMode = 'homemade';
-        var selectedIngredients = ['chicken', 'rice', 'peas', 'egg']; // pre-selected defaults
-        var wizardRecipe = [];
+        var rd = resumeData || {};
+        var wizardMode = rd.mode || 'homemade';
+        var selectedIngredients = rd.ingredients ? rd.ingredients.slice() : ['chicken', 'rice', 'peas', 'egg'];
+        var wizardRecipe = rd.recipe ? rd.recipe.slice() : [];
+        var currentStepId = rd.step || 'setupStep1';
         var allStepEls = overlay.querySelectorAll('.setup-step');
         var WIZARD_KIBBLE_BRANDS = [
             { value: 'royal_canin', label: 'Royal Canin' }, { value: 'purina_proplan', label: 'Purina Pro Plan' }, { value: 'hills', label: "Hill's Science Plan" }, { value: 'eukanuba', label: 'Eukanuba' }, { value: 'advance', label: 'Advance (Affinity)' }, { value: 'acana', label: 'Acana' }, { value: 'orijen', label: 'Orijen' }, { value: 'brit_care', label: 'Brit Care' }, { value: 'brit_premium', label: 'Brit Premium' }, { value: 'ownat', label: 'Ownat' }, { value: 'libra', label: 'Libra' }, { value: 'criadores', label: 'Criadores' }, { value: 'gosbi', label: 'Gosbi' }, { value: 'true_instinct', label: 'True Instinct' }, { value: 'taste_wild', label: 'Taste of the Wild' }, { value: 'farmina', label: 'Farmina N&D' }, { value: 'other', label: 'Outra' }
@@ -417,6 +420,7 @@
         function showStep(id) {
             hideAllSteps();
             document.getElementById(id).classList.add('active');
+            currentStepId = id;
         }
 
         function renderProgress(current, total) {
@@ -427,6 +431,26 @@
                 html += '<span class="setup-progress-dot ' + cls + '"></span>';
             }
             progressEl.innerHTML = html;
+        }
+
+        function saveOnboardingState() {
+            var data = {
+                mode: wizardMode,
+                step: currentStepId,
+                ingredients: selectedIngredients
+            };
+            if (wizardRecipe.length > 0) data.recipe = wizardRecipe;
+            // Save kibble form values if on kibble step
+            if (wizardMode === 'kibble') {
+                data.kibble = {
+                    brand: document.getElementById('setupKibbleBrand').value || '',
+                    amount: document.getElementById('setupKibbleAmount').value || '150',
+                    meals: document.getElementById('setupKibbleMeals').value || '2',
+                    bagSize: document.getElementById('setupKibbleBagSize').value || '12',
+                    currentKg: document.getElementById('setupKibbleCurrentKg').value || '0'
+                };
+            }
+            db.ref('dogs/' + dogId + '/onboarding').set(data);
         }
 
         function renderIngredientGrid() {
@@ -455,10 +479,12 @@
         }
 
         function renderWizardRecipe() {
-            // Build recipe from selected ingredients
+            // Build recipe from selected ingredients, preserving amounts from previous state
+            var oldAmounts = {};
+            wizardRecipe.forEach(function (r) { oldAmounts[r.id] = r.amount; });
             wizardRecipe = selectedIngredients.map(function (id) {
                 var ing = getIngredient(id);
-                var defaultAmt = ing.unit === 'un' ? 1 : (ing.unit === 'ml' ? 5 : 50);
+                var defaultAmt = oldAmounts[id] !== undefined ? oldAmounts[id] : (ing.unit === 'un' ? 1 : (ing.unit === 'ml' ? 5 : 50));
                 return { id: id, amount: defaultAmt };
             });
 
@@ -487,39 +513,38 @@
             document.getElementById('setupModeKibble').classList.toggle('active', mode === 'kibble');
         }
 
-        function closeWizard() {
+        function completeOnboarding(settingsUpdate, stockMeals, stockDesc) {
+            var updates = {};
+            updates['dogs/' + dogId + '/settings'] = settingsUpdate;
+            updates['dogs/' + dogId + '/onboarding'] = null;
+            updates['dogs/' + dogId + '/onboardingComplete'] = true;
+            if (stockMeals > 0) {
+                updates['dogs/' + dogId + '/state'] = { stock: stockMeals, lastProcessed: Date.now() };
+            }
+            db.ref().update(updates).then(function () {
+                if (stockMeals > 0) {
+                    state.stock = stockMeals;
+                    state.lastProcessed = Date.now();
+                    addHistoryEntry('production', stockMeals, stockDesc);
+                    render();
+                }
+            });
             overlay.style.display = 'none';
+            showToast('Alimentação configurada!');
         }
 
         function saveHomemade() {
             var finalRecipe = wizardRecipe.filter(function (r) { return r.amount > 0; });
             var initialStock = parseInt(document.getElementById('setupHomemadeStock').value, 10) || 0;
 
-            var settingsUpdate = {
+            completeOnboarding({
                 alertThreshold: 5,
                 telegramToken: '',
                 telegramChatId: '',
                 feedingMode: 'homemade',
                 recipe: finalRecipe,
                 kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2, bagSize: 12 }
-            };
-
-            var updates = {};
-            updates['dogs/' + dogId + '/settings'] = settingsUpdate;
-            if (initialStock > 0) {
-                updates['dogs/' + dogId + '/state'] = { stock: initialStock, lastProcessed: Date.now() };
-            }
-            db.ref().update(updates).then(function () {
-                if (initialStock > 0) {
-                    state.stock = initialStock;
-                    state.lastProcessed = Date.now();
-                    addHistoryEntry('production', initialStock, 'Stock inicial: ' + initialStock + ' refeições');
-                    render();
-                }
-            });
-
-            closeWizard();
-            showToast('Alimentação configurada!');
+            }, initialStock, 'Stock inicial: ' + initialStock + ' refeições');
         }
 
         function saveKibble() {
@@ -529,7 +554,7 @@
             var currentKg = parseFloat(document.getElementById('setupKibbleCurrentKg').value) || 0;
             var mealsFromStock = currentKg > 0 ? Math.floor((currentKg * 1000) / amount) : 0;
 
-            var settingsUpdate = {
+            completeOnboarding({
                 alertThreshold: 5,
                 telegramToken: '',
                 telegramChatId: '',
@@ -544,30 +569,22 @@
                     mealsPerDay: mealsPerDay,
                     bagSize: bagSize
                 }
-            };
+            }, mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeições)');
+        }
 
+        function skipWizard() {
             var updates = {};
-            updates['dogs/' + dogId + '/settings'] = settingsUpdate;
-            if (mealsFromStock > 0) {
-                updates['dogs/' + dogId + '/state'] = { stock: mealsFromStock, lastProcessed: Date.now() };
-            }
-            db.ref().update(updates).then(function () {
-                if (mealsFromStock > 0) {
-                    state.stock = mealsFromStock;
-                    state.lastProcessed = Date.now();
-                    addHistoryEntry('production', mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeições)');
-                    render();
-                }
-            });
-
-            closeWizard();
-            showToast('Alimentação configurada!');
+            updates['dogs/' + dogId + '/onboarding'] = null;
+            updates['dogs/' + dogId + '/onboardingComplete'] = true;
+            db.ref().update(updates);
+            overlay.style.display = 'none';
+            showToast('Podes configurar mais tarde nas definições');
         }
 
         // Bind events
         document.getElementById('setupModeHomemade').onclick = function () { setWizardMode('homemade'); };
         document.getElementById('setupModeKibble').onclick = function () { setWizardMode('kibble'); };
-        document.getElementById('setupSkip').onclick = closeWizard;
+        document.getElementById('setupSkip').onclick = skipWizard;
 
         document.getElementById('setupNext1').onclick = function () {
             if (wizardMode === 'homemade') {
@@ -577,13 +594,30 @@
             } else {
                 renderProgress(2, 2);
                 showStep('setupStep2Kibble');
+                // Restore kibble form values if resuming
+                if (rd.kibble) {
+                    document.getElementById('setupKibbleBrand').value = rd.kibble.brand || '';
+                    if (rd.kibble.brand) {
+                        var match = WIZARD_KIBBLE_BRANDS.find(function (b) { return b.value === rd.kibble.brand; });
+                        if (match) {
+                            document.getElementById('setupKibbleBrandBtn').textContent = match.label;
+                            document.getElementById('setupKibbleBrandBtn').classList.add('has-value');
+                        }
+                    }
+                    document.getElementById('setupKibbleAmount').value = rd.kibble.amount || '150';
+                    document.getElementById('setupKibbleMeals').value = rd.kibble.meals || '2';
+                    document.getElementById('setupKibbleBagSize').value = rd.kibble.bagSize || '12';
+                    document.getElementById('setupKibbleCurrentKg').value = rd.kibble.currentKg || '0';
+                }
             }
+            saveOnboardingState();
         };
 
         // Homemade flow
         document.getElementById('setupBackIng').onclick = function () {
             renderProgress(1, 3);
             showStep('setupStep1');
+            saveOnboardingState();
         };
         document.getElementById('setupNextIng').onclick = function () {
             if (selectedIngredients.length === 0) {
@@ -593,10 +627,18 @@
             renderProgress(3, 3);
             renderWizardRecipe();
             showStep('setupStep3Amounts');
+            saveOnboardingState();
         };
         document.getElementById('setupBackAmounts').onclick = function () {
             renderProgress(2, 3);
             showStep('setupStep2Ingredients');
+            // Sync recipe amounts back before going back
+            wizardRecipe.forEach(function (item, idx) {
+                var input = document.querySelector('#setupRecipeList .recipe-ing-amount[data-idx="' + idx + '"]');
+                if (input) item.amount = parseFloat(input.value) || 0;
+            });
+            renderIngredientGrid();
+            saveOnboardingState();
         };
         document.getElementById('setupFinishHomemade').onclick = saveHomemade;
 
@@ -604,6 +646,7 @@
         document.getElementById('setupBackKibble').onclick = function () {
             renderProgress(1, 2);
             showStep('setupStep1');
+            saveOnboardingState();
         };
         document.getElementById('setupFinishKibble').onclick = saveKibble;
 
@@ -616,10 +659,39 @@
             });
         };
 
-        // Init
-        setWizardMode('homemade');
-        renderProgress(1, 2);
-        showStep('setupStep1');
+        // Init / Resume
+        setWizardMode(wizardMode);
+
+        // Determine where to resume
+        if (currentStepId === 'setupStep2Ingredients') {
+            renderProgress(2, 3);
+            renderIngredientGrid();
+            showStep('setupStep2Ingredients');
+        } else if (currentStepId === 'setupStep3Amounts') {
+            renderProgress(3, 3);
+            renderWizardRecipe();
+            showStep('setupStep3Amounts');
+        } else if (currentStepId === 'setupStep2Kibble') {
+            renderProgress(2, 2);
+            showStep('setupStep2Kibble');
+            if (rd.kibble) {
+                document.getElementById('setupKibbleBrand').value = rd.kibble.brand || '';
+                if (rd.kibble.brand) {
+                    var match = WIZARD_KIBBLE_BRANDS.find(function (b) { return b.value === rd.kibble.brand; });
+                    if (match) {
+                        document.getElementById('setupKibbleBrandBtn').textContent = match.label;
+                        document.getElementById('setupKibbleBrandBtn').classList.add('has-value');
+                    }
+                }
+                document.getElementById('setupKibbleAmount').value = rd.kibble.amount || '150';
+                document.getElementById('setupKibbleMeals').value = rd.kibble.meals || '2';
+                document.getElementById('setupKibbleBagSize').value = rd.kibble.bagSize || '12';
+                document.getElementById('setupKibbleCurrentKg').value = rd.kibble.currentKg || '0';
+            }
+        } else {
+            renderProgress(1, wizardMode === 'homemade' ? 3 : 2);
+            showStep('setupStep1');
+        }
     }
 
     function handleJoinDog() {
@@ -664,7 +736,7 @@
         localStorage.setItem('melucafeeder_currentDog', dogId);
         firstLoad = true;
 
-        // Set dog name in header
+        // Set dog name in header + check onboarding
         db.ref('dogs/' + dogId).once('value', function (snap) {
             var dog = snap.val() || {};
             appDogNameEl.textContent = dog.name || 'MelucaFeeder';
@@ -683,13 +755,17 @@
             if (heatTabBtn) heatTabBtn.style.display = isMale ? 'none' : '';
             if (heatTabContent && isMale) {
                 heatTabContent.classList.remove('active');
-                // If heat tab was active, switch to dashboard
                 if (heatTabBtn && heatTabBtn.classList.contains('active')) {
                     heatTabBtn.classList.remove('active');
                     var dashTab = document.querySelector('.tab[data-tab="dashboard"]');
                     if (dashTab) dashTab.classList.add('active');
                     document.getElementById('tab-dashboard').classList.add('active');
                 }
+            }
+
+            // Check if onboarding is incomplete (only for dogs explicitly marked as not complete)
+            if (dog.onboardingComplete === false) {
+                showSetupWizard(dogId, dog.onboarding || null);
             }
         });
 
