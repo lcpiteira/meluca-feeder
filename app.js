@@ -923,10 +923,10 @@
         var lastDay = new Date(calendarYear, calendarMonth + 1, 0);
         var startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
 
-        // Count meals per day from history
+        // Count meals per day from history (all deductions = meals given)
         var mealCounts = {};
         history.forEach(function (e) {
-            if (e.type === 'auto') {
+            if (e.quantity < 0) {
                 var d = new Date(e.date);
                 if (d.getMonth() === calendarMonth && d.getFullYear() === calendarYear) {
                     var key = d.getDate();
