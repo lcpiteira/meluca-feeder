@@ -283,6 +283,7 @@
                         <button class="custom-dropdown-btn has-value" id="vetTypeBtn">🩺 Consulta</button>
                         <input type="hidden" id="vetType" value="consulta">
                         <input type="text" id="vetDesc" placeholder="Descrição" class="vet-input">
+                        <input type="text" id="vetClinic" placeholder="Clínica / Veterinário (opcional)" class="vet-input">
                         <div class="vet-dates-row">
                             <div>
                                 <label class="dog-form-label">Data</label>
@@ -295,8 +296,28 @@
                                 <input type="hidden" id="vetNextDate">
                             </div>
                         </div>
+                        <div class="vet-extra-row">
+                            <div>
+                                <label class="dog-form-label">Recorrência</label>
+                                <button class="custom-dropdown-btn" id="vetRecurrenceBtn">Sem recorrência</button>
+                                <input type="hidden" id="vetRecurrence" value="">
+                            </div>
+                            <div>
+                                <label class="dog-form-label">Lembrete</label>
+                                <button class="custom-dropdown-btn" id="vetReminderBtn">1 dia antes</button>
+                                <input type="hidden" id="vetReminder" value="1">
+                            </div>
+                        </div>
+                        <div class="vet-extra-row">
+                            <div>
+                                <label class="dog-form-label">Custo (€)</label>
+                                <input type="number" id="vetCost" min="0" step="0.01" placeholder="0.00" class="vet-input">
+                            </div>
+                        </div>
+                        <textarea id="vetNotes" placeholder="Observações (opcional)" class="vet-input vet-textarea" rows="2"></textarea>
                         <button id="vetAddBtn" class="btn btn-primary">Registar</button>
                     </div>
+                    <div class="vet-filter-bar" id="vetFilterBar"></div>
                     <div class="vet-upcoming" id="vetUpcoming"></div>
                     <div class="vet-history" id="vetHistory"></div>
                 </section>

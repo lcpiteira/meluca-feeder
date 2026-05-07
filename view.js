@@ -260,6 +260,7 @@
     function renderVet(list) {
         var upcomingEl = document.getElementById('vVetUpcoming');
         var histEl = document.getElementById('vVetHistory');
+        var typeIcons = { consulta: '🩺', vacina: '💉', desparasitacao: '💊', cirurgia: '🏥', analises: '🔬', medicacao: '💊', outro: '📋' };
 
         var now = new Date();
         var upcoming = list.filter(function (e) { return e.nextDate && new Date(e.nextDate) >= now; });
@@ -268,7 +269,11 @@
         if (upcoming.length > 0) {
             upcomingEl.innerHTML = '<h3 style="font-size: 0.75rem; color: var(--warning); margin-bottom: 8px;">PRÓXIMAS DATAS</h3>' +
                 upcoming.map(function (e) {
-                    return '<div class="vet-item"><span>📅 ' + escapeHtml(e.description || e.type) + '</span><span>' + formatDate(new Date(e.nextDate)) + '</span></div>';
+                    var icon = typeIcons[e.type] || '📋';
+                    var detail = e.clinic ? ' · 📍 ' + escapeHtml(e.clinic) : '';
+                    return '<div class="vet-item-card upcoming"><div class="vet-item-header"><span>📅 ' + icon + ' ' + escapeHtml(e.description || e.type) +
+                        '</span><span class="date">' + formatDate(new Date(e.nextDate)) + '</span></div>' +
+                        (detail ? '<div class="vet-item-details">' + detail + '</div>' : '') + '</div>';
                 }).join('');
         } else {
             upcomingEl.innerHTML = '';
@@ -278,9 +283,14 @@
             histEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
         } else {
             histEl.innerHTML = past.slice(0, 15).map(function (e) {
-                var typeIcons = { consulta: '🩺', vacina: '💉', desparasitacao: '💊', outro: '📋' };
                 var icon = typeIcons[e.type] || '📋';
-                return '<div class="vet-item"><span>' + icon + ' ' + escapeHtml(e.description || '') + '</span><span>' + formatDate(new Date(e.date)) + '</span></div>';
+                var details = [];
+                if (e.clinic) details.push('📍 ' + escapeHtml(e.clinic));
+                if (e.cost != null) details.push('💰 ' + e.cost.toFixed(2) + ' €');
+                if (e.notes) details.push('📝 ' + escapeHtml(e.notes));
+                var detailHtml = details.length > 0 ? '<div class="vet-item-details"><span>' + details.join('</span><span>') + '</span></div>' : '';
+                return '<div class="vet-item-card"><div class="vet-item-header"><span>' + icon + ' ' + escapeHtml(e.description || '') +
+                    '</span><span class="date">' + formatDate(new Date(e.date)) + '</span></div>' + detailHtml + '</div>';
             }).join('');
         }
     }

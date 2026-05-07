@@ -138,11 +138,19 @@
     const vetTypeEl = document.getElementById('vetType');
     const vetTypeBtnEl = document.getElementById('vetTypeBtn');
     const vetDescEl = document.getElementById('vetDesc');
+    const vetClinicEl = document.getElementById('vetClinic');
     const vetDateEl = document.getElementById('vetDate');
     const vetDateBtnEl = document.getElementById('vetDateBtn');
     const vetNextDateEl = document.getElementById('vetNextDate');
     const vetNextDateBtnEl = document.getElementById('vetNextDateBtn');
+    const vetRecurrenceEl = document.getElementById('vetRecurrence');
+    const vetRecurrenceBtnEl = document.getElementById('vetRecurrenceBtn');
+    const vetReminderEl = document.getElementById('vetReminder');
+    const vetReminderBtnEl = document.getElementById('vetReminderBtn');
+    const vetCostEl = document.getElementById('vetCost');
+    const vetNotesEl = document.getElementById('vetNotes');
     const vetAddBtnEl = document.getElementById('vetAddBtn');
+    const vetFilterBarEl = document.getElementById('vetFilterBar');
     const vetUpcomingEl = document.getElementById('vetUpcoming');
     const vetHistoryEl = document.getElementById('vetHistory');
     const healthNoteTextEl = document.getElementById('healthNoteText');
@@ -1144,8 +1152,29 @@
         { value: 'consulta', label: '🩺 Consulta' },
         { value: 'vacina', label: '💉 Vacina' },
         { value: 'desparasitacao', label: '💊 Desparasitação' },
+        { value: 'cirurgia', label: '🏥 Cirurgia' },
+        { value: 'analises', label: '🔬 Análises' },
+        { value: 'medicacao', label: '💊 Medicação contínua' },
         { value: 'outro', label: '📋 Outro' }
     ];
+
+    var VET_RECURRENCE_OPTIONS = [
+        { value: '', label: 'Sem recorrência' },
+        { value: '30', label: 'Mensal (30 dias)' },
+        { value: '90', label: 'Trimestral (3 meses)' },
+        { value: '180', label: 'Semestral (6 meses)' },
+        { value: '365', label: 'Anual (12 meses)' }
+    ];
+
+    var VET_REMINDER_OPTIONS = [
+        { value: '0', label: 'No próprio dia' },
+        { value: '1', label: '1 dia antes' },
+        { value: '3', label: '3 dias antes' },
+        { value: '7', label: '1 semana antes' },
+        { value: '14', label: '2 semanas antes' }
+    ];
+
+    var vetActiveFilter = 'all';
 
     function showDropdown(title, options, currentValue, onSelect, opts) {
         opts = opts || {};
@@ -2022,6 +2051,23 @@
             }, { searchable: false });
         });
 
+        vetRecurrenceBtnEl.addEventListener('click', function () {
+            showDropdown('Recorrência', VET_RECURRENCE_OPTIONS, vetRecurrenceEl.value, function (value, label) {
+                vetRecurrenceEl.value = value;
+                vetRecurrenceBtnEl.textContent = label;
+                if (value) vetRecurrenceBtnEl.classList.add('has-value');
+                else vetRecurrenceBtnEl.classList.remove('has-value');
+            }, { searchable: false });
+        });
+
+        vetReminderBtnEl.addEventListener('click', function () {
+            showDropdown('Lembrete', VET_REMINDER_OPTIONS, vetReminderEl.value, function (value, label) {
+                vetReminderEl.value = value;
+                vetReminderBtnEl.textContent = label;
+                vetReminderBtnEl.classList.add('has-value');
+            }, { searchable: false });
+        });
+
         // Date picker buttons
         vetDateBtnEl.addEventListener('click', function () {
             showDatePicker(function (dateStr) {
@@ -2248,20 +2294,51 @@
         var desc = vetDescEl.value.trim();
         var date = vetDateEl.value;
         var nextDate = vetNextDateEl.value;
+        var clinic = vetClinicEl.value.trim();
+        var cost = vetCostEl.value ? parseFloat(vetCostEl.value) : null;
+        var notes = vetNotesEl.value.trim();
+        var recurrence = vetRecurrenceEl.value ? parseInt(vetRecurrenceEl.value, 10) : null;
+        var reminderDays = parseInt(vetReminderEl.value, 10) || 0;
 
         if (!desc) { showToast('Adiciona uma descrição'); return; }
         if (!date) { showToast('Selecciona a data'); return; }
 
-        var entry = { type: type, description: desc, date: date, nextDate: nextDate || null, createdAt: new Date().toISOString() };
+        // Auto-calculate nextDate from recurrence if not manually set
+        if (!nextDate && recurrence) {
+            var base = new Date(date);
+            base.setDate(base.getDate() + recurrence);
+            nextDate = base.toISOString().slice(0, 10);
+        }
+
+        var entry = {
+            type: type,
+            description: desc,
+            date: date,
+            nextDate: nextDate || null,
+            clinic: clinic || null,
+            cost: cost,
+            notes: notes || null,
+            recurrence: recurrence,
+            reminderDays: reminderDays,
+            createdAt: new Date().toISOString()
+        };
         if (db && currentDogId) dogRef('vet').push(entry);
 
+        // Reset form
         vetDescEl.value = '';
+        vetClinicEl.value = '';
+        vetCostEl.value = '';
+        vetNotesEl.value = '';
         vetNextDateEl.value = '';
         vetNextDateBtnEl.textContent = 'Seleccionar data';
         vetNextDateBtnEl.classList.remove('has-value');
+        vetRecurrenceEl.value = '';
+        vetRecurrenceBtnEl.textContent = 'Sem recorrência';
+        vetRecurrenceBtnEl.classList.remove('has-value');
+        vetReminderEl.value = '1';
+        vetReminderBtnEl.textContent = '1 dia antes';
         vetTypeEl.value = 'consulta';
         vetTypeBtnEl.textContent = '🩺 Consulta';
-        // Reset date to today
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
@@ -2276,63 +2353,107 @@
     }
 
     function renderVet() {
-        var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '🪱 Desparasitação', outro: '📋 Outro' };
+        var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '💊 Desparasitação', cirurgia: '🏥 Cirurgia', analises: '🔬 Análises', medicacao: '💊 Medicação', outro: '📋 Outro' };
         var today = new Date().toISOString().slice(0, 10);
-        var upcoming = vetData.filter(function (e) { return e.nextDate && e.nextDate >= today; })
+
+        // Render filter bar
+        var types = {};
+        vetData.forEach(function (e) { types[e.type] = true; });
+        var filterTypes = Object.keys(types);
+        if (filterTypes.length > 1) {
+            var filterHtml = '<button class="vet-filter-chip' + (vetActiveFilter === 'all' ? ' active' : '') + '" data-filter="all">Todos</button>';
+            filterTypes.forEach(function (t) {
+                filterHtml += '<button class="vet-filter-chip' + (vetActiveFilter === t ? ' active' : '') + '" data-filter="' + t + '">' + (typeLabels[t] || t) + '</button>';
+            });
+            vetFilterBarEl.innerHTML = filterHtml;
+            vetFilterBarEl.style.display = '';
+            vetFilterBarEl.querySelectorAll('.vet-filter-chip').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    vetActiveFilter = btn.getAttribute('data-filter');
+                    renderVet();
+                });
+            });
+        } else {
+            vetFilterBarEl.innerHTML = '';
+            vetFilterBarEl.style.display = 'none';
+        }
+
+        // Apply filter
+        var filtered = vetActiveFilter === 'all' ? vetData : vetData.filter(function (e) { return e.type === vetActiveFilter; });
+
+        var upcoming = filtered.filter(function (e) { return e.nextDate && e.nextDate >= today; })
             .sort(function (a, b) { return a.nextDate.localeCompare(b.nextDate); });
 
         if (upcoming.length > 0) {
             vetUpcomingEl.innerHTML = '<h3>Próximos</h3>';
             upcoming.forEach(function (e) {
-                var d = e.nextDate.split('-');
-                var div = document.createElement('div');
-                div.className = 'vet-item upcoming';
-                div.innerHTML = '<span class="vet-type">' + (typeLabels[e.type] || e.type) +
-                    '</span><span class="vet-item-desc">' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] +
-                    '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
-                div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteVetEntry(e.id, e.description); });
-                vetUpcomingEl.appendChild(div);
+                vetUpcomingEl.appendChild(buildVetItem(e, typeLabels, true));
             });
         } else {
             vetUpcomingEl.innerHTML = '';
         }
 
-        if (vetData.length === 0) {
+        if (filtered.length === 0) {
             vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
             return;
         }
         vetHistoryEl.innerHTML = '<h3>Histórico</h3>';
-        vetData.slice(0, 20).forEach(function (e) {
-            var d = e.date.split('-');
-            var div = document.createElement('div');
-            div.className = 'vet-item';
-            div.innerHTML = '<span class="vet-type">' + (typeLabels[e.type] || e.type) +
-                '</span><span class="vet-item-desc">' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] +
-                '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
-            div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteVetEntry(e.id, e.description); });
-            vetHistoryEl.appendChild(div);
+        filtered.slice(0, 30).forEach(function (e) {
+            vetHistoryEl.appendChild(buildVetItem(e, typeLabels, false));
         });
     }
 
+    function buildVetItem(e, typeLabels, isUpcoming) {
+        var d = (isUpcoming ? e.nextDate : e.date).split('-');
+        var div = document.createElement('div');
+        div.className = 'vet-item-card' + (isUpcoming ? ' upcoming' : '');
+
+        var headerHtml = '<div class="vet-item-header">' +
+            '<span class="vet-type">' + (typeLabels[e.type] || e.type) + '</span>' +
+            '<span class="vet-item-desc">' + escapeHtml(e.description) + '</span>' +
+            '<span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span>' +
+            '<button class="btn-delete-entry" title="Apagar">🗑️</button>' +
+            '</div>';
+
+        var detailParts = [];
+        if (e.clinic) detailParts.push('<span>📍 ' + escapeHtml(e.clinic) + '</span>');
+        if (e.cost != null) detailParts.push('<span>💰 ' + e.cost.toFixed(2) + ' €</span>');
+        if (e.recurrence) {
+            var recLabel = { 30: 'Mensal', 90: 'Trimestral', 180: 'Semestral', 365: 'Anual' };
+            detailParts.push('<span>🔄 ' + (recLabel[e.recurrence] || e.recurrence + ' dias') + '</span>');
+        }
+        if (e.notes) detailParts.push('<span class="vet-item-notes">📝 ' + escapeHtml(e.notes) + '</span>');
+
+        var detailHtml = detailParts.length > 0 ? '<div class="vet-item-details">' + detailParts.join('') + '</div>' : '';
+
+        div.innerHTML = headerHtml + detailHtml;
+        div.querySelector('.btn-delete-entry').addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            deleteVetEntry(e.id, e.description);
+        });
+        return div;
+    }
+
     function checkVetReminders() {
-        var today = new Date().toISOString().slice(0, 10);
-        var reminderKey = 'melucafeeder_vet_reminder_' + today;
+        var today = new Date();
+        var todayStr = today.toISOString().slice(0, 10);
+        var reminderKey = 'melucafeeder_vet_reminder_' + todayStr;
         if (localStorage.getItem(reminderKey)) return;
 
-        var tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        var tomorrowStr = tomorrow.toISOString().slice(0, 10);
-
-        var upcoming = vetData.filter(function (e) {
-            return e.nextDate && (e.nextDate === today || e.nextDate === tomorrowStr);
+        var msgs = [];
+        vetData.forEach(function (e) {
+            if (!e.nextDate) return;
+            var nextMs = new Date(e.nextDate).getTime();
+            var diffDays = Math.ceil((nextMs - today.getTime()) / 86400000);
+            var remind = e.reminderDays != null ? e.reminderDays : 1;
+            if (diffDays >= 0 && diffDays <= remind) {
+                var when = diffDays === 0 ? 'HOJE' : (diffDays === 1 ? 'AMANHÃ' : 'em ' + diffDays + ' dias');
+                msgs.push(when + ': ' + e.description);
+            }
         });
 
-        if (upcoming.length > 0) {
+        if (msgs.length > 0) {
             localStorage.setItem(reminderKey, '1');
-            var msgs = upcoming.map(function (e) {
-                var when = e.nextDate === today ? 'HOJE' : 'AMANHÃ';
-                return when + ': ' + e.description;
-            });
             sendNotification('🏥 MelucaFeeder: Lembretes veterinários\n' + msgs.join('\n'));
         }
     }

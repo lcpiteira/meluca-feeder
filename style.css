@@ -1514,12 +1514,73 @@ section h2 {
     margin-top: 12px;
 }
 
-.vet-item {
+/* Vet extra form rows */
+.vet-extra-row {
+    display: flex;
+    gap: 12px;
+}
+
+.vet-extra-row > div {
+    flex: 1;
+    min-width: 0;
+}
+
+.vet-textarea {
+    resize: vertical;
+    min-height: 48px;
+    font-family: inherit;
+}
+
+/* Vet filter bar */
+.vet-filter-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.vet-filter-chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.vet-filter-chip:hover {
+    border-color: var(--primary);
+}
+
+.vet-filter-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    font-weight: 600;
+}
+
+/* Vet item card */
+.vet-item-card {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 0;
+    font-size: 0.85rem;
+}
+
+.vet-item-card:last-child {
+    border-bottom: none;
+}
+
+.vet-item-card.upcoming .vet-type {
+    color: var(--warning);
+}
+
+.vet-item-header {
     display: flex;
     align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.85rem;
     gap: 8px;
 }
 
@@ -1531,21 +1592,30 @@ section h2 {
     white-space: nowrap;
 }
 
-.vet-item:last-child {
-    border-bottom: none;
+.vet-item-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 6px;
+    padding-left: 4px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
 }
 
-.vet-item.upcoming {
-    color: var(--warning);
+.vet-item-notes {
+    flex-basis: 100%;
+    white-space: normal;
+    line-height: 1.4;
 }
 
 .vet-type {
     font-weight: 600;
     min-width: 80px;
     font-size: 0.8rem;
+    flex-shrink: 0;
 }
 
-.vet-item .date {
+.vet-item-header .date {
     color: var(--text-muted);
     font-size: 0.75rem;
     white-space: nowrap;
