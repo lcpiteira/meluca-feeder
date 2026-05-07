@@ -158,6 +158,9 @@
     const vetHistoryEl = document.getElementById('vetHistory');
     const healthNoteTextEl = document.getElementById('healthNoteText');
     const healthNoteBtnEl = document.getElementById('healthNoteBtn');
+    const healthNoteFormEl = document.getElementById('healthNoteForm');
+    const healthNoteToggleBtnEl = document.getElementById('healthNoteToggleBtn');
+    const healthNoteCancelBtnEl = document.getElementById('healthNoteCancelBtn');
     const healthNotesListEl = document.getElementById('healthNotesList');
     const heatStatusEl = document.getElementById('heatStatus');
     const heatFormEl = document.getElementById('heatForm');
@@ -2050,6 +2053,15 @@
             vetToggleFormBtnEl.style.display = '';
         });
         healthNoteBtnEl.addEventListener('click', handleHealthNote);
+        healthNoteToggleBtnEl.addEventListener('click', function () {
+            healthNoteFormEl.style.display = '';
+            healthNoteToggleBtnEl.style.display = 'none';
+            healthNoteTextEl.focus();
+        });
+        healthNoteCancelBtnEl.addEventListener('click', function () {
+            healthNoteFormEl.style.display = 'none';
+            healthNoteToggleBtnEl.style.display = '';
+        });
         healthNoteTextEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleHealthNote();
         });
@@ -2479,6 +2491,8 @@
 
         if (db && currentDogId) dogRef('healthNotes').push({ text: text, date: new Date().toISOString() });
         healthNoteTextEl.value = '';
+        healthNoteFormEl.style.display = 'none';
+        healthNoteToggleBtnEl.style.display = '';
         showToast('Nota adicionada');
     }
 

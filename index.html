@@ -329,10 +329,16 @@
                 </section>
 
                 <section class="health-notes-section">
-                    <h2>Notas de Saúde</h2>
-                    <div class="health-note-form">
+                    <div class="vet-section-header">
+                        <h2>Notas de Saúde</h2>
+                        <button class="btn btn-primary btn-sm" id="healthNoteToggleBtn">+ Nova nota</button>
+                    </div>
+                    <div class="health-note-form" id="healthNoteForm" style="display:none;">
                         <input type="text" id="healthNoteText" placeholder="Ex: Vómito, diarreia, alergia..." class="vet-input">
-                        <button id="healthNoteBtn" class="btn btn-primary">Adicionar</button>
+                        <div class="health-note-form-actions">
+                            <button class="btn btn-secondary" id="healthNoteCancelBtn">Cancelar</button>
+                            <button id="healthNoteBtn" class="btn btn-primary">Adicionar</button>
+                        </div>
                     </div>
                     <div class="health-notes-list" id="healthNotesList"></div>
                 </section>

@@ -1395,21 +1395,25 @@ section h2 {
 .btn-sm {
     padding: 6px 14px;
     font-size: 0.8rem;
+    border-radius: var(--radius-sm);
 }
 
-.vet-form {
+.vet-form,
+.health-note-form {
     display: flex;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 16px;
-    padding: 16px;
+    padding: 20px;
     background: var(--bg-surface);
-    border: 1px solid var(--border);
+    border: 2px solid var(--primary);
     border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
     animation: tour-tooltip-in 0.25s ease;
 }
 
-.vet-form-actions {
+.vet-form-actions,
+.health-note-form-actions {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
