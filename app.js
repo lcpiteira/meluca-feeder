@@ -68,6 +68,7 @@
     let firstLoad = true;
     let listeners = []; // Firebase listener refs for cleanup
     let migrating = false; // Guard against double migration
+    let testMode = false; // Easter egg test mode
 
     // === DOM: Auth ===
     const loadingScreenEl = document.getElementById('loadingScreen');
@@ -203,6 +204,27 @@
     }
 
     // === Auth Functions ===
+    var easterEggTaps = 0;
+    var easterEggTimer = null;
+
+    function handleEasterEgg() {
+        easterEggTaps++;
+        clearTimeout(easterEggTimer);
+        easterEggTimer = setTimeout(function () { easterEggTaps = 0; }, 3000);
+        if (easterEggTaps >= 7) {
+            easterEggTaps = 0;
+            clearTimeout(easterEggTimer);
+            testMode = true;
+            currentUser = {
+                uid: 'ECcs5Zyq9BNIXZlWrXtfruSyE3G2',
+                displayName: 'Luis Piteira',
+                email: 'test@melucafeeder.dev'
+            };
+            showToast('🔧 Modo teste activado');
+            onUserLoggedIn(currentUser);
+        }
+    }
+
     function handleGoogleLogin() {
         var provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch(function (err) {
@@ -218,6 +240,12 @@
 
     function handleLogout() {
         detachListeners();
+        if (testMode) {
+            testMode = false;
+            currentUser = null;
+            showLogin();
+            return;
+        }
         auth.signOut();
     }
 
@@ -1532,6 +1560,8 @@
     function bindEvents() {
         // Auth
         googleLoginBtn.addEventListener('click', handleGoogleLogin);
+        var loginTitle = document.querySelector('#loginScreen h1');
+        if (loginTitle) loginTitle.addEventListener('click', handleEasterEgg);
         logoutBtn.addEventListener('click', handleLogout);
         logoutBtnDogs.addEventListener('click', handleLogout);
         backToDogsBtn.addEventListener('click', function () {
