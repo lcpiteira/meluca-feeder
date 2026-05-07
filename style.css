@@ -1388,6 +1388,41 @@ section h2 {
     transform: scale(0.96);
 }
 
+/* Members list */
+.member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.member-row:last-child {
+    border-bottom: none;
+}
+
+.member-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-remove-member {
+    background: none;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-remove-member:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
 /* Toast */
 .toast {
     position: fixed;

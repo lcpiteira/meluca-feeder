@@ -153,14 +153,79 @@
     function loadMembers() {
         db.ref('dogs/' + currentDogId + '/members').once('value', function (snap) {
             var members = snap.val() || {};
+            var currentRole = (members[currentUser.uid] && members[currentUser.uid].role) || '';
+            var isOwner = currentRole === 'owner';
+
             var html = '<h3 style="margin-top: 16px; font-size: 0.85rem; color: var(--text-light);">Membros actuais</h3>';
             Object.keys(members).forEach(function (uid) {
                 var m = members[uid];
                 var roleLabel = m.role === 'owner' ? '👑 Owner' : '👤 Membro';
-                html += '<div class="vet-item"><span>' + escapeHtml(m.name || uid) + '</span><span class="vet-type">' + roleLabel + '</span></div>';
+                html += '<div class="member-row"><div class="member-info"><span>' + escapeHtml(m.name || uid) + '</span><span class="vet-type">' + roleLabel + '</span></div>';
+                if (isOwner && uid !== currentUser.uid) {
+                    html += '<button class="btn-remove-member" data-uid="' + uid + '" data-name="' + escapeHtml(m.name || uid) + '">Remover</button>';
+                }
+                html += '</div>';
             });
             membersListEl.innerHTML = html;
+
+            // Bind remove buttons
+            membersListEl.querySelectorAll('.btn-remove-member').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var uid = btn.getAttribute('data-uid');
+                    var name = btn.getAttribute('data-name');
+                    handleRemoveMember(uid, name);
+                });
+            });
         });
+    }
+
+    function handleRemoveMember(uid, name) {
+        showSettingsModal('Queres remover "' + name + '" deste cão?', function () {
+            var updates = {};
+            updates['dogs/' + currentDogId + '/members/' + uid] = null;
+            updates['users/' + uid + '/dogs/' + currentDogId] = null;
+            db.ref().update(updates).then(function () {
+                showToast(name + ' removido');
+                loadMembers();
+            });
+        });
+    }
+
+    function showSettingsModal(message, onConfirm) {
+        // Create modal if not present
+        var overlay = document.getElementById('settingsModalOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'settingsModalOverlay';
+            overlay.className = 'modal-overlay';
+            overlay.style.display = 'none';
+            overlay.innerHTML = '<div class="modal-card"><p class="modal-message" id="settingsModalMessage"></p>' +
+                '<div class="modal-actions"><button class="btn btn-secondary" id="settingsModalCancel">Cancelar</button>' +
+                '<button class="btn btn-danger" id="settingsModalConfirm">Confirmar</button></div></div>';
+            document.body.appendChild(overlay);
+        }
+
+        var msgEl = document.getElementById('settingsModalMessage');
+        var confirmBtn = document.getElementById('settingsModalConfirm');
+        var cancelBtn = document.getElementById('settingsModalCancel');
+
+        msgEl.textContent = message;
+        overlay.style.display = '';
+
+        function cleanup() {
+            overlay.style.display = 'none';
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
+        }
+
+        function handleConfirm() { cleanup(); onConfirm(); }
+        function handleCancel() { cleanup(); }
+        function handleOverlay(e) { if (e.target === overlay) cleanup(); }
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
     }
 
     async function handleTestNotification() {
