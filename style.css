@@ -95,12 +95,138 @@ body {
 }
 
 /* Login Screen */
-.login-screen,
-.onboarding-screen {
+.login-screen {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 80vh;
+}
+
+/* Dogs List Screen */
+.dogs-screen {
+    padding: 24px 16px;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.dogs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dogs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dogs-header h1 {
+    font-size: 1.4rem;
+}
+
+.dogs-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+}
+
+.user-name-dogs {
+    color: var(--text-muted);
+}
+
+.dogs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dog-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow);
+}
+
+.dog-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-glow);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.dog-card-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.dog-card-avatar {
+    font-size: 2rem;
+}
+
+.dog-card-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.dog-card-role {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.dog-card-arrow {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+}
+
+.dogs-actions {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.dogs-create h3,
+.dogs-join h3 {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 10px;
+}
+
+.dogs-create-row {
+    display: flex;
+    gap: 10px;
+}
+
+.dogs-create-row .vet-input {
+    flex: 1;
+}
+
+/* Back button */
+.btn-back {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    transition: background 0.2s;
+}
+
+.btn-back:hover {
+    background: var(--primary-glow);
 }
 
 .login-card {

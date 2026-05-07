@@ -38,12 +38,16 @@
 
     // === DOM: Auth ===
     const loginScreenEl = document.getElementById('loginScreen');
-    const onboardingScreenEl = document.getElementById('onboardingScreen');
+    const dogsScreenEl = document.getElementById('dogsScreen');
     const appMainEl = document.getElementById('appMain');
     const googleLoginBtn = document.getElementById('googleLogin');
     const logoutBtn = document.getElementById('logoutBtn');
+    const logoutBtnDogs = document.getElementById('logoutBtnDogs');
     const userNameEl = document.getElementById('userName');
-    const dogSelectorEl = document.getElementById('dogSelector');
+    const userNameDogsEl = document.getElementById('userNameDogs');
+    const dogsListEl = document.getElementById('dogsList');
+    const appDogNameEl = document.getElementById('appDogName');
+    const backToDogsBtn = document.getElementById('backToDogs');
     const newDogNameEl = document.getElementById('newDogName');
     const createDogBtnEl = document.getElementById('createDogBtn');
     const inviteCodeEl = document.getElementById('inviteCode');
@@ -143,24 +147,26 @@
 
     function showLogin() {
         loginScreenEl.style.display = '';
-        onboardingScreenEl.style.display = 'none';
+        dogsScreenEl.style.display = 'none';
         appMainEl.style.display = 'none';
     }
 
-    function showOnboarding() {
+    function showDogsScreen() {
         loginScreenEl.style.display = 'none';
-        onboardingScreenEl.style.display = '';
+        dogsScreenEl.style.display = '';
         appMainEl.style.display = 'none';
+        renderDogsList();
     }
 
     function showApp() {
         loginScreenEl.style.display = 'none';
-        onboardingScreenEl.style.display = 'none';
+        dogsScreenEl.style.display = 'none';
         appMainEl.style.display = '';
     }
 
     function onUserLoggedIn(user) {
         userNameEl.textContent = user.displayName || user.email;
+        userNameDogsEl.textContent = user.displayName || user.email;
 
         // Ensure user profile exists
         db.ref('users/' + user.uid).once('value', function (snap) {
@@ -182,12 +188,11 @@
                 // Check if there's legacy data to migrate
                 checkAndMigrateLegacyData(user);
             } else {
-                // Use saved preference or first dog
-                var savedDog = localStorage.getItem('melucafeeder_currentDog');
-                if (savedDog && userDogs[savedDog]) {
-                    selectDog(savedDog);
+                // Always show dogs screen (unless already viewing a dog)
+                if (!currentDogId || !userDogs[currentDogId]) {
+                    showDogsScreen();
                 } else {
-                    selectDog(dogIds[0]);
+                    renderDogsList();
                 }
             }
         });
@@ -200,7 +205,7 @@
                 // Legacy data found — migrate to a new dog
                 migrateToNewDog(user, snap.val());
             } else {
-                showOnboarding();
+                showDogsScreen();
             }
         });
     }
@@ -239,11 +244,11 @@
             });
         }).then(function () {
             showToast('Dados migrados com sucesso!');
-            selectDog(dogId);
+            showDogsScreen();
         }).catch(function (err) {
             console.error('Migration error:', err);
             showToast('Erro na migração');
-            showOnboarding();
+            showDogsScreen();
         });
     }
 
@@ -275,7 +280,7 @@
         db.ref().update(updates).then(function () {
             newDogNameEl.value = '';
             showToast(name + ' criado!');
-            selectDog(dogId);
+            showDogsScreen();
         });
     }
 
@@ -306,13 +311,13 @@
             db.ref().update(updates).then(function () {
                 inviteCodeEl.value = '';
                 showToast('Juntaste-te com sucesso!');
-                selectDog(dogId);
+                showDogsScreen();
             });
         });
     }
 
     function selectDog(dogId) {
-        if (currentDogId === dogId) return;
+        if (currentDogId === dogId && appMainEl.style.display !== 'none') return;
 
         // Detach old listeners
         detachListeners();
@@ -321,42 +326,43 @@
         localStorage.setItem('melucafeeder_currentDog', dogId);
         firstLoad = true;
 
+        // Set dog name in header
+        db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
+            appDogNameEl.textContent = snap.val() || 'MelucaFeeder';
+        });
+
         showApp();
         render();
         attachDogListeners(dogId);
-        renderDogSelector();
     }
 
-    function renderDogSelector() {
+    function renderDogsList() {
         var dogIds = Object.keys(userDogs);
-        if (dogIds.length <= 1) {
-            // Load dog name for title
-            if (currentDogId) {
-                db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
-                    dogSelectorEl.innerHTML = '<span class="current-dog-name">' + escapeHtml(snap.val() || 'Cão') + '</span>';
-                });
-            }
+        if (dogIds.length === 0) {
+            dogsListEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Ainda não tens nenhum cão registado.</p>';
             return;
         }
 
-        // Multiple dogs: show selector
-        db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
-            var currentName = snap.val() || 'Cão';
-            dogSelectorEl.innerHTML = '<select id="dogSelect" class="dog-select"></select>';
-            var selectEl = document.getElementById('dogSelect');
+        dogsListEl.innerHTML = '';
+        dogIds.forEach(function (id) {
+            db.ref('dogs/' + id).once('value', function (snap) {
+                var dog = snap.val();
+                if (!dog) return;
 
-            dogIds.forEach(function (id) {
-                db.ref('dogs/' + id + '/name').once('value', function (nameSnap) {
-                    var opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = nameSnap.val() || id;
-                    opt.selected = id === currentDogId;
-                    selectEl.appendChild(opt);
+                var role = (dog.members && dog.members[currentUser.uid]) ? dog.members[currentUser.uid].role : '';
+                var roleLabel = role === 'owner' ? 'Dono' : 'Membro';
+
+                var card = document.createElement('div');
+                card.className = 'dog-card';
+                card.innerHTML = '<div class="dog-card-info">' +
+                    '<span class="dog-card-avatar">🐕</span>' +
+                    '<div><div class="dog-card-name">' + escapeHtml(dog.name || 'Cão') + '</div>' +
+                    '<div class="dog-card-role">' + roleLabel + '</div></div>' +
+                    '</div><span class="dog-card-arrow">›</span>';
+                card.addEventListener('click', function () {
+                    selectDog(id);
                 });
-            });
-
-            selectEl.addEventListener('change', function () {
-                selectDog(selectEl.value);
+                dogsListEl.appendChild(card);
             });
         });
     }
@@ -701,6 +707,12 @@
         // Auth
         googleLoginBtn.addEventListener('click', handleGoogleLogin);
         logoutBtn.addEventListener('click', handleLogout);
+        logoutBtnDogs.addEventListener('click', handleLogout);
+        backToDogsBtn.addEventListener('click', function () {
+            detachListeners();
+            currentDogId = null;
+            showDogsScreen();
+        });
         createDogBtnEl.addEventListener('click', handleCreateDog);
         joinDogBtnEl.addEventListener('click', handleJoinDog);
         newDogNameEl.addEventListener('keypress', function (e) {

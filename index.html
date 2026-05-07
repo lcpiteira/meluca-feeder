@@ -26,22 +26,32 @@
             </div>
         </div>
 
-        <!-- Onboarding Screen -->
-        <div class="onboarding-screen" id="onboardingScreen" style="display: none;">
-            <div class="login-card">
-                <h2>Bem-vindo! 🎉</h2>
-                <p class="subtitle">Cria um perfil para o teu cão ou junta-te a um existente.</p>
-                <div class="onboarding-options">
-                    <div class="onboarding-create">
-                        <h3>Novo cão</h3>
-                        <input type="text" id="newDogName" placeholder="Nome do cão" class="vet-input">
-                        <button class="btn btn-primary" id="createDogBtn">Criar</button>
+        <!-- Dogs List Screen -->
+        <div class="dogs-screen" id="dogsScreen" style="display: none;">
+            <div class="dogs-container">
+                <div class="dogs-header">
+                    <h1>🐶 Os meus cães</h1>
+                    <div class="dogs-header-actions">
+                        <span class="user-name-dogs" id="userNameDogs"></span>
+                        <button class="btn-link" id="logoutBtnDogs">Sair</button>
+                    </div>
+                </div>
+                <div class="dogs-list" id="dogsList"></div>
+                <div class="dogs-actions">
+                    <div class="dogs-create">
+                        <h3>Adicionar novo cão</h3>
+                        <div class="dogs-create-row">
+                            <input type="text" id="newDogName" placeholder="Nome do cão" class="vet-input">
+                            <button class="btn btn-primary" id="createDogBtn">Criar</button>
+                        </div>
                     </div>
                     <div class="onboarding-divider"><span>ou</span></div>
-                    <div class="onboarding-join">
-                        <h3>Código de convite</h3>
-                        <input type="text" id="inviteCode" placeholder="Ex: ABC123" class="vet-input" maxlength="6" style="text-transform: uppercase;">
-                        <button class="btn btn-secondary" id="joinDogBtn">Juntar</button>
+                    <div class="dogs-join">
+                        <h3>Juntar-me a um cão existente</h3>
+                        <div class="dogs-create-row">
+                            <input type="text" id="inviteCode" placeholder="Código de convite" class="vet-input" maxlength="6" style="text-transform: uppercase;">
+                            <button class="btn btn-secondary" id="joinDogBtn">Juntar</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,8 +62,8 @@
             <header>
                 <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">🌙</button>
                 <div class="header-top">
-                    <h1>MelucaFeeder</h1>
-                    <div class="dog-selector" id="dogSelector"></div>
+                    <button class="btn-back" id="backToDogs" aria-label="Voltar aos cães">← </button>
+                    <h1 id="appDogName">MelucaFeeder</h1>
                 </div>
                 <div class="user-bar">
                     <span class="user-name" id="userName"></span>
