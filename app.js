@@ -103,6 +103,8 @@
     const heatEndDateEl = document.getElementById('heatEndDate');
     const heatStartBtnEl = document.getElementById('heatStartBtn');
     const heatEndBtnEl = document.getElementById('heatEndBtn');
+    const heatStartDateBtnEl = document.getElementById('heatStartDateBtn');
+    const heatEndDateBtnEl = document.getElementById('heatEndDateBtn');
     const heatTimelineEl = document.getElementById('heatTimeline');
     const heatCalendarEl = document.getElementById('heatCalendar');
     const heatHistoryEl = document.getElementById('heatHistory');
@@ -470,6 +472,87 @@
         confirmBtn.addEventListener('click', handleConfirm);
         cancelBtn.addEventListener('click', handleCancel);
         overlay.addEventListener('click', handleOverlay);
+    }
+
+    // === Custom Date Picker ===
+    function showDatePicker(onSelect) {
+        var overlay = document.getElementById('datePickerOverlay');
+        var grid = document.getElementById('dpGrid');
+        var label = document.getElementById('dpMonthLabel');
+        var prevBtn = document.getElementById('dpPrev');
+        var nextBtn = document.getElementById('dpNext');
+        var cancelBtn = document.getElementById('dpCancel');
+
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var viewMonth = today.getMonth();
+        var viewYear = today.getFullYear();
+
+        overlay.style.display = '';
+
+        function renderMonth() {
+            var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            label.textContent = monthNames[viewMonth] + ' ' + viewYear;
+
+            var firstDay = new Date(viewYear, viewMonth, 1);
+            var lastDay = new Date(viewYear, viewMonth + 1, 0);
+            var startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+            grid.innerHTML = '';
+            for (var i = 0; i < startDow; i++) {
+                var empty = document.createElement('button');
+                empty.className = 'dp-day empty';
+                grid.appendChild(empty);
+            }
+            for (var d = 1; d <= lastDay.getDate(); d++) {
+                var btn = document.createElement('button');
+                btn.className = 'dp-day';
+                btn.textContent = d;
+                var thisDate = new Date(viewYear, viewMonth, d);
+                thisDate.setHours(0, 0, 0, 0);
+                if (thisDate.getTime() === today.getTime()) btn.classList.add('today');
+                if (thisDate > today) btn.classList.add('future');
+
+                (function (dateObj) {
+                    if (dateObj <= today) {
+                        btn.addEventListener('click', function () {
+                            var yyyy = dateObj.getFullYear();
+                            var mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            var dd = String(dateObj.getDate()).padStart(2, '0');
+                            cleanup();
+                            onSelect(yyyy + '-' + mm + '-' + dd);
+                        });
+                    }
+                })(thisDate);
+
+                grid.appendChild(btn);
+            }
+        }
+
+        function cleanup() {
+            overlay.style.display = 'none';
+            prevBtn.removeEventListener('click', handlePrev);
+            nextBtn.removeEventListener('click', handleNext);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
+        }
+
+        function handlePrev() { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } renderMonth(); }
+        function handleNext() { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } renderMonth(); }
+        function handleCancel() { cleanup(); }
+        function handleOverlay(e) { if (e.target === overlay) cleanup(); }
+
+        prevBtn.addEventListener('click', handlePrev);
+        nextBtn.addEventListener('click', handleNext);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
+
+        renderMonth();
+    }
+
+    function formatPickedDate(dateStr) {
+        var parts = dateStr.split('-');
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
     }
 
     // === Firebase Listeners (per dog) ===
@@ -856,6 +939,20 @@
         });
         heatStartBtnEl.addEventListener('click', handleHeatStart);
         heatEndBtnEl.addEventListener('click', handleHeatEnd);
+        heatStartDateBtnEl.addEventListener('click', function () {
+            showDatePicker(function (dateStr) {
+                heatStartDateEl.value = dateStr;
+                heatStartDateBtnEl.textContent = formatPickedDate(dateStr);
+                heatStartDateBtnEl.classList.add('has-value');
+            });
+        });
+        heatEndDateBtnEl.addEventListener('click', function () {
+            showDatePicker(function (dateStr) {
+                heatEndDateEl.value = dateStr;
+                heatEndDateBtnEl.textContent = formatPickedDate(dateStr);
+                heatEndDateBtnEl.classList.add('has-value');
+            });
+        });
         calPrevEl.addEventListener('click', function () { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderCalendar(); });
         calNextEl.addEventListener('click', function () { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderCalendar(); });
 
@@ -1133,10 +1230,15 @@
         if (activeCycle) {
             heatFormEl.style.display = 'none';
             heatActiveEl.style.display = '';
+            heatEndDateBtnEl.textContent = 'Seleccionar data';
+            heatEndDateBtnEl.classList.remove('has-value');
+            heatEndDateEl.value = '';
         } else {
             heatFormEl.style.display = '';
             heatActiveEl.style.display = 'none';
-            heatStartDateEl.value = new Date().toISOString().slice(0, 10);
+            heatStartDateBtnEl.textContent = 'Seleccionar data';
+            heatStartDateBtnEl.classList.remove('has-value');
+            heatStartDateEl.value = '';
         }
 
         // Timeline

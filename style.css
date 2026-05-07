@@ -1074,6 +1074,107 @@ section h2 {
     font-weight: 500;
 }
 
+/* Date Picker Button */
+.date-picker-btn {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+.date-picker-btn:hover {
+    border-color: var(--primary);
+}
+
+.date-picker-btn.has-value {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Date Picker Modal */
+.date-picker-modal {
+    max-width: 320px;
+}
+
+.dp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.dp-month-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.dp-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin-bottom: 4px;
+}
+
+.dp-weekdays span {
+    text-align: center;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 4px 0;
+}
+
+.dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.dp-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text);
+    transition: background 0.15s;
+}
+
+.dp-day:hover {
+    background: var(--primary-glow);
+}
+
+.dp-day.today {
+    border: 2px solid var(--primary);
+    font-weight: 700;
+}
+
+.dp-day.selected {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+}
+
+.dp-day.empty {
+    visibility: hidden;
+    cursor: default;
+}
+
+.dp-day.future {
+    color: var(--text-muted);
+    opacity: 0.4;
+    cursor: default;
+}
+
 .heat-timeline {
     margin: 20px 0;
 }

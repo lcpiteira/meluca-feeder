@@ -254,14 +254,16 @@
                     <div class="heat-form" id="heatForm">
                         <div class="heat-form-row">
                             <label>Início do sangramento:</label>
-                            <input type="date" id="heatStartDate" class="vet-input">
+                            <button class="date-picker-btn" id="heatStartDateBtn">Seleccionar data</button>
+                            <input type="hidden" id="heatStartDate">
                         </div>
                         <button id="heatStartBtn" class="btn btn-primary">Registar Cio</button>
                     </div>
                     <div class="heat-active" id="heatActive" style="display: none;">
                         <div class="heat-form-row">
                             <label>Fim do sangramento:</label>
-                            <input type="date" id="heatEndDate" class="vet-input">
+                            <button class="date-picker-btn" id="heatEndDateBtn">Seleccionar data</button>
+                            <input type="hidden" id="heatEndDate">
                         </div>
                         <button id="heatEndBtn" class="btn btn-secondary">Registar Fim</button>
                     </div>
@@ -292,6 +294,24 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="modalCancel">Cancelar</button>
                 <button class="btn btn-danger" id="modalConfirm">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Picker Modal -->
+    <div class="modal-overlay" id="datePickerOverlay" style="display: none;">
+        <div class="modal-card date-picker-modal">
+            <div class="dp-header">
+                <button class="btn btn-secondary btn-small" id="dpPrev">◀</button>
+                <span class="dp-month-label" id="dpMonthLabel"></span>
+                <button class="btn btn-secondary btn-small" id="dpNext">▶</button>
+            </div>
+            <div class="dp-weekdays">
+                <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
+            </div>
+            <div class="dp-grid" id="dpGrid"></div>
+            <div class="modal-actions" style="margin-top: 12px;">
+                <button class="btn btn-secondary" id="dpCancel">Cancelar</button>
             </div>
         </div>
     </div>
