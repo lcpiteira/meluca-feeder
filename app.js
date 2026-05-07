@@ -97,8 +97,13 @@
             db.ref('state').on('value', function (snapshot) {
                 const cloudState = snapshot.val();
                 if (cloudState) {
-                    state.stock = cloudState.stock || 0;
-                    state.lastProcessed = cloudState.lastProcessed || 0;
+                    // Always accept Firebase as source of truth
+                    // Only update local state if Firebase has newer data or this is first load
+                    var cloudProcessed = cloudState.lastProcessed || 0;
+                    if (cloudProcessed >= state.lastProcessed || firstLoad) {
+                        state.stock = cloudState.stock || 0;
+                        state.lastProcessed = cloudProcessed;
+                    }
 
                     // Only process deductions on first load
                     if (firstLoad) {
@@ -209,17 +214,26 @@
     }
 
     // === Auto Deduction Logic ===
+    const MAX_AUTO_DEDUCTIONS = 4; // Safety cap: max 2 days (4 meals)
+
     function processAutoDeductions() {
         if (state.lastProcessed === 0) return;
 
         const now = new Date();
         const lastProcessed = new Date(state.lastProcessed);
-        let deducted = 0;
 
+        // Safety: if lastProcessed is in the future, just update timestamp
+        if (lastProcessed > now) {
+            state.lastProcessed = now.getTime();
+            saveState();
+            return;
+        }
+
+        let deducted = 0;
         let cursor = new Date(lastProcessed);
         cursor = getNextMealTime(cursor);
 
-        while (cursor <= now) {
+        while (cursor <= now && deducted < MAX_AUTO_DEDUCTIONS) {
             if (state.stock > 0) {
                 state.stock--;
                 deducted++;
@@ -232,6 +246,10 @@
             state.lastProcessed = now.getTime();
             saveState();
             checkAlert();
+            // Warn if cap was hit (potential stale data issue)
+            if (deducted >= MAX_AUTO_DEDUCTIONS) {
+                console.warn('MelucaFeeder: Auto-deduction capped at ' + MAX_AUTO_DEDUCTIONS + '. Possible stale lastProcessed.');
+            }
         } else {
             state.lastProcessed = now.getTime();
             saveState();
@@ -309,27 +327,36 @@
             return;
         }
 
-        try {
-            const url = 'https://api.telegram.org/bot' + settings.telegramToken + '/sendMessage';
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: settings.telegramChatId,
-                    text: message,
-                    parse_mode: 'HTML'
-                })
-            });
+        // Support multiple chat IDs separated by comma
+        var chatIds = String(settings.telegramChatId).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+        var url = 'https://api.telegram.org/bot' + settings.telegramToken + '/sendMessage';
+        var results = [];
 
-            if (!response.ok) {
-                console.error('Telegram API error:', await response.json());
-                return false;
+        for (var i = 0; i < chatIds.length; i++) {
+            try {
+                var response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatIds[i],
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Telegram API error for chat ' + chatIds[i] + ':', await response.json());
+                    results.push(false);
+                } else {
+                    results.push(true);
+                }
+            } catch (e) {
+                console.error('Notification error for chat ' + chatIds[i] + ':', e);
+                results.push(false);
             }
-            return true;
-        } catch (e) {
-            console.error('Notification error:', e);
-            return false;
         }
+
+        return results.some(function (r) { return r; });
     }
 
     // === Render ===

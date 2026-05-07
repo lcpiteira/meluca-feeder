@@ -147,32 +147,38 @@
 
     async function handleTestNotification() {
         const token = telegramTokenEl.value.trim();
-        const chatId = telegramChatIdEl.value.trim();
+        const chatIdRaw = telegramChatIdEl.value.trim();
 
-        if (!token || !chatId) {
+        if (!token || !chatIdRaw) {
             showToast('Configura o Telegram primeiro');
             return;
         }
 
-        try {
-            const url = `https://api.telegram.org/bot${token}/sendMessage`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: chatId,
-                    text: '🧪 Teste MelucaFeeder: Notificações a funcionar!',
-                    parse_mode: 'HTML'
-                })
-            });
+        var chatIds = chatIdRaw.split(',').map(function (id) { return id.trim(); }).filter(Boolean);
+        var url = `https://api.telegram.org/bot${token}/sendMessage`;
+        var success = 0;
 
-            if (response.ok) {
-                showToast('Notificação enviada com sucesso!');
-            } else {
-                showToast('Erro ao enviar notificação');
-            }
-        } catch (e) {
-            showToast('Erro de ligação ao Telegram');
+        for (var i = 0; i < chatIds.length; i++) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: chatIds[i],
+                        text: '🧪 Teste MelucaFeeder: Notificações a funcionar!',
+                        parse_mode: 'HTML'
+                    })
+                });
+                if (response.ok) success++;
+            } catch (e) { /* continue */ }
+        }
+
+        if (success === chatIds.length) {
+            showToast('Notificação enviada para ' + success + ' destinatário(s)!');
+        } else if (success > 0) {
+            showToast('Enviada para ' + success + '/' + chatIds.length + ' destinatários');
+        } else {
+            showToast('Erro ao enviar notificação');
         }
     }
 

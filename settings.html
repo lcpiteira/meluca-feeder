@@ -59,8 +59,8 @@
                     <input type="text" id="telegramToken" placeholder="123456:ABC-DEF...">
                 </div>
                 <div class="setting-group">
-                    <label>Telegram Chat ID:</label>
-                    <input type="text" id="telegramChatId" placeholder="-1001234567890">
+                    <label>Telegram Chat ID(s):</label>
+                    <input type="text" id="telegramChatId" placeholder="-1001234567890, -1009876543210">
                 </div>
                 <div class="setting-group">
                     <button id="testNotification" class="btn btn-small">Testar Notificação</button>
@@ -69,7 +69,7 @@
                     Cria um bot com o <a href="https://t.me/BotFather" target="_blank">@BotFather</a>, 
                     obtém o token, e envia uma mensagem ao bot. Depois usa 
                     <a href="https://api.telegram.org/bot{TOKEN}/getUpdates" target="_blank">getUpdates</a> 
-                    para descobrir o teu Chat ID.
+                    para descobrir o teu Chat ID. Para enviar para múltiplas pessoas, separa os IDs por vírgula.
                 </p>
             </div>
         </section>
