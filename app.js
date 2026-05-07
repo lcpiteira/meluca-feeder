@@ -37,6 +37,7 @@
     let listeners = []; // Firebase listener refs for cleanup
 
     // === DOM: Auth ===
+    const loadingScreenEl = document.getElementById('loadingScreen');
     const loginScreenEl = document.getElementById('loginScreen');
     const dogsScreenEl = document.getElementById('dogsScreen');
     const appMainEl = document.getElementById('appMain');
@@ -149,12 +150,14 @@
     }
 
     function showLogin() {
+        loadingScreenEl.style.display = 'none';
         loginScreenEl.style.display = '';
         dogsScreenEl.style.display = 'none';
         appMainEl.style.display = 'none';
     }
 
     function showDogsScreen() {
+        loadingScreenEl.style.display = 'none';
         loginScreenEl.style.display = 'none';
         dogsScreenEl.style.display = '';
         appMainEl.style.display = 'none';
@@ -162,6 +165,7 @@
     }
 
     function showApp() {
+        loadingScreenEl.style.display = 'none';
         loginScreenEl.style.display = 'none';
         dogsScreenEl.style.display = 'none';
         appMainEl.style.display = '';

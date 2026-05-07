@@ -328,8 +328,8 @@ body {
 .header-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
+    padding-right: 48px;
 }
 
 .user-bar {
@@ -472,13 +472,12 @@ body {
 }
 
 header {
-    text-align: center;
     padding: 32px 0 24px;
     position: relative;
 }
 
 header h1 {
-    font-size: 2rem;
+    font-size: 1.6rem;
     font-weight: 800;
     background: linear-gradient(135deg, #f472b6, #ec4899, #db2777);
     -webkit-background-clip: text;
@@ -496,8 +495,6 @@ header h1 {
 
 section {
     background: var(--card);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--card-border);
     border-radius: var(--radius);
     padding: 24px;
