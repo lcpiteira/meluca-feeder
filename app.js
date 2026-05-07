@@ -103,6 +103,12 @@
     const addBtnEl = document.getElementById('addBtn');
     const manualDeductEl = document.getElementById('manualDeduct');
     const manualAddEl = document.getElementById('manualAdd');
+    const dashHomemadeActionsEl = document.getElementById('dashHomemadeActions');
+    const dashKibbleActionsEl = document.getElementById('dashKibbleActions');
+    const addBagBtnEl = document.getElementById('addBagBtn');
+    const kibbleBagDescEl = document.getElementById('kibbleBagDesc');
+    const kibbleManualDeductEl = document.getElementById('kibbleManualDeduct');
+    const kibbleManualAddEl = document.getElementById('kibbleManualAdd');
     const historyListEl = document.getElementById('historyList');
     const lastUpdateEl = document.getElementById('lastUpdate');
     const toastEl = document.getElementById('toast');
@@ -801,6 +807,7 @@
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
                 renderCalcIngredients();
                 updatePrepMode();
+                updateDashboardMode();
             }
         });
         listeners.push({ ref: settingsRef, event: 'value' });
@@ -1117,7 +1124,8 @@
             stockStatusEl.textContent = 'Stock baixo (alerta: ' + settings.alertThreshold + ')';
             stockStatusEl.classList.add('warning');
         } else {
-            var days = Math.floor(state.stock / 2);
+            var mealsPerDay = (settings.feedingMode === 'kibble' && settings.kibble) ? (settings.kibble.mealsPerDay || 2) : 2;
+            var days = Math.floor(state.stock / mealsPerDay);
             stockStatusEl.textContent = '≈ ' + days + ' dias de autonomia';
             stockStatusEl.style.color = '';
         }
@@ -1139,7 +1147,8 @@
             ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
             return;
         }
-        var daysLeft = state.stock / 2;
+        var mealsPerDay = (settings.feedingMode === 'kibble' && settings.kibble) ? (settings.kibble.mealsPerDay || 2) : 2;
+        var daysLeft = state.stock / mealsPerDay;
         var ruptureDate = new Date();
         ruptureDate.setDate(ruptureDate.getDate() + Math.floor(daysLeft));
         var day = String(ruptureDate.getDate()).padStart(2, '0');
@@ -1205,6 +1214,9 @@
         });
         manualDeductEl.addEventListener('click', handleManualDeduct);
         manualAddEl.addEventListener('click', handleManualAdd);
+        addBagBtnEl.addEventListener('click', handleAddBag);
+        kibbleManualDeductEl.addEventListener('click', handleManualDeduct);
+        kibbleManualAddEl.addEventListener('click', handleManualAdd);
         calcBtnEl.addEventListener('click', handleCalculate);
         weightBtnEl.addEventListener('click', handleWeightAdd);
         weightInputEl.addEventListener('keypress', function (e) {
@@ -1314,6 +1326,7 @@
         renderCalendar();
         renderCalcIngredients();
         updatePrepMode();
+        updateDashboardMode();
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
@@ -1385,6 +1398,32 @@
         addHistoryEntry('manual', 1, 'Adição manual');
         render();
         showToast('1 refeição adicionada');
+    }
+
+    function handleAddBag() {
+        var k = settings.kibble || {};
+        var bagSize = k.bagSize || 12;
+        var amount = k.amount || 150;
+        var mealsPerDay = k.mealsPerDay || 2;
+        var bagGrams = bagSize * 1000;
+        var mealsFromBag = Math.floor(bagGrams / amount);
+        state.stock += mealsFromBag;
+        state.lastProcessed = Date.now();
+        saveState();
+        addHistoryEntry('production', mealsFromBag, 'Saca ' + bagSize + 'kg: +' + mealsFromBag + ' refeições');
+        render();
+        showToast('+' + mealsFromBag + ' refeições (' + bagSize + 'kg)');
+    }
+
+    function updateDashboardMode() {
+        var mode = settings.feedingMode || 'homemade';
+        dashHomemadeActionsEl.style.display = mode === 'homemade' ? '' : 'none';
+        dashKibbleActionsEl.style.display = mode === 'kibble' ? '' : 'none';
+        if (mode === 'kibble') {
+            var k = settings.kibble || {};
+            var bagSize = k.bagSize || 12;
+            kibbleBagDescEl.textContent = 'Saca de ' + bagSize + ' kg (' + Math.floor((bagSize * 1000) / (k.amount || 150)) + ' refeições)';
+        }
     }
 
     // === Shopping List ===

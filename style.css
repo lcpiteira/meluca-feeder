@@ -884,6 +884,10 @@ section h2 {
     background: linear-gradient(135deg, var(--primary-light), var(--primary));
 }
 
+.btn-full {
+    width: 100%;
+}
+
 .btn-secondary {
     background: var(--bg-surface);
     color: var(--text-light);

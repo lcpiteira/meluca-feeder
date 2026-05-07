@@ -162,6 +162,7 @@
     const kibbleSpecialBtnEl = document.getElementById('kibbleSpecialBtn');
     const kibbleAmountEl = document.getElementById('kibbleAmount');
     const kibbleMealsEl = document.getElementById('kibbleMeals');
+    const kibbleBagSizeEl = document.getElementById('kibbleBagSize');
     const targetWeightEl = document.getElementById('targetWeight');
 
     var currentFeedingMode = 'homemade';
@@ -233,6 +234,7 @@
         var k = s.kibble || {};
         kibbleAmountEl.value = k.amount || 150;
         kibbleMealsEl.value = k.mealsPerDay || 2;
+        kibbleBagSizeEl.value = k.bagSize || 12;
         setDropdownValue(kibbleBrandBtnEl, kibbleBrandEl, k.brand, KIBBLE_BRANDS);
         setDropdownValue(kibbleLifeStageBtnEl, kibbleLifeStageEl, k.lifeStage, KIBBLE_LIFE_STAGES);
         setDropdownValue(kibbleProteinBtnEl, kibbleProteinEl, k.protein, KIBBLE_PROTEINS);
@@ -373,7 +375,8 @@
                 protein: kibbleProteinEl.value || '',
                 special: kibbleSpecialEl.value || '',
                 amount: parseInt(kibbleAmountEl.value, 10) || 150,
-                mealsPerDay: parseInt(kibbleMealsEl.value, 10) || 2
+                mealsPerDay: parseInt(kibbleMealsEl.value, 10) || 2,
+                bagSize: parseFloat(kibbleBagSizeEl.value) || 12
             },
             targetWeight: parseFloat(targetWeightEl.value) || null
         };
