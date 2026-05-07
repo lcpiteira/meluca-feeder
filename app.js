@@ -1,152 +1,183 @@
-﻿(function () {
+(function () {
     'use strict';
 
-    // === Shared references ===
-    var FIREBASE_CONFIG = MelucaShared.FIREBASE_CONFIG;
-    var INGREDIENT_POOL = MelucaShared.INGREDIENT_POOL;
-    var DOG_ICONS = MelucaShared.DOG_ICONS;
-    var KIBBLE_BRANDS_MAP = MelucaShared.KIBBLE_BRANDS_MAP;
-    var getIngredient = MelucaShared.getIngredient;
-    var initAvatarPicker = MelucaShared.initAvatarPicker;
-    var compressPhoto = MelucaShared.compressPhoto;
-    var setAvatarPreview = MelucaShared.setAvatarPreview;
-    var getAvatarFromPicker = MelucaShared.getAvatarFromPicker;
+    // === Firebase Config ===
+    const FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
+        authDomain: "melucafeeder.firebaseapp.com",
+        databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "melucafeeder",
+        storageBucket: "melucafeeder.firebasestorage.app",
+        messagingSenderId: "314126208675",
+        appId: "1:314126208675:web:424edf29c499aa168db916"
+    };
 
     // === Constants ===
-    var SETTINGS_KEY = 'melucafeeder_settings';
-    var MORNING_HOUR = 8;
-    var EVENING_HOUR = 21;
-    var MAX_AUTO_DEDUCTIONS = 4;
+    const SETTINGS_KEY = 'melucafeeder_settings';
+    const MORNING_HOUR = 8;
+    const EVENING_HOUR = 21;
+    const MAX_AUTO_DEDUCTIONS = 4;
+
+    var INGREDIENT_POOL = [
+        { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
+        { id: 'turkey', name: 'Peru', icon: '🦃', unit: 'g' },
+        { id: 'beef', name: 'Vaca', icon: '🥩', unit: 'g' },
+        { id: 'pork', name: 'Porco', icon: '🥓', unit: 'g' },
+        { id: 'fish', name: 'Peixe', icon: '🐟', unit: 'g' },
+        { id: 'liver', name: 'Fígado', icon: '🫀', unit: 'g' },
+        { id: 'tripe', name: 'Dobrada', icon: '🫘', unit: 'g' },
+        { id: 'rice', name: 'Arroz', icon: '🍚', unit: 'g' },
+        { id: 'pasta', name: 'Massa', icon: '🍝', unit: 'g' },
+        { id: 'oats', name: 'Aveia', icon: '🌾', unit: 'g' },
+        { id: 'sweet_potato', name: 'Batata-doce', icon: '🍠', unit: 'g' },
+        { id: 'potato', name: 'Batata', icon: '🥔', unit: 'g' },
+        { id: 'peas', name: 'Ervilhas', icon: '🫛', unit: 'g' },
+        { id: 'carrot', name: 'Cenoura', icon: '🥕', unit: 'g' },
+        { id: 'broccoli', name: 'Brócolos', icon: '🥦', unit: 'g' },
+        { id: 'spinach', name: 'Espinafres', icon: '🥬', unit: 'g' },
+        { id: 'pumpkin', name: 'Abóbora', icon: '🎃', unit: 'g' },
+        { id: 'zucchini', name: 'Courgette', icon: '🥒', unit: 'g' },
+        { id: 'green_beans', name: 'Feijão verde', icon: '🫘', unit: 'g' },
+        { id: 'apple', name: 'Maçã', icon: '🍎', unit: 'g' },
+        { id: 'banana', name: 'Banana', icon: '🍌', unit: 'g' },
+        { id: 'blueberry', name: 'Mirtilo', icon: '🫐', unit: 'g' },
+        { id: 'egg', name: 'Ovo', icon: '🥚', unit: 'un' },
+        { id: 'oil', name: 'Azeite', icon: '🫒', unit: 'ml' },
+        { id: 'coconut_oil', name: 'Óleo de coco', icon: '🥥', unit: 'ml' },
+        { id: 'supplement', name: 'Suplemento', icon: '💊', unit: 'g' },
+        { id: 'yogurt', name: 'Iogurte natural', icon: '🥛', unit: 'g' },
+        { id: 'cheese', name: 'Queijo fresco', icon: '🧀', unit: 'g' }
+    ];
 
     // === State ===
-    var state = { stock: 0, lastProcessed: 0 };
-    var settings = loadLocalSettings();
-    var history = [];
-    var weightData = [];
-    var vetData = [];
-    var healthNotes = [];
-    var heatCycles = [];
-    var calendarMonth = new Date().getMonth();
-    var calendarYear = new Date().getFullYear();
+    let state = { stock: 0, lastProcessed: 0 };
+    let settings = loadLocalSettings();
+    let history = [];
+    let weightData = [];
+    let vetData = [];
+    let healthNotes = [];
+    let heatCycles = [];
+    let calendarMonth = new Date().getMonth();
+    let calendarYear = new Date().getFullYear();
 
-    var db = null;
-    var auth = null;
-    var currentUser = null;
-    var currentDogId = null;
-    var userDogs = {};
-    var firstLoad = true;
-    var listeners = []; // Firebase listener refs for cleanup
-    var migrating = false; // Guard against double migration
-    var testMode = false; // Easter egg test mode
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let currentDogId = null;
+    let userDogs = {};
+    let firstLoad = true;
+    let listeners = []; // Firebase listener refs for cleanup
+    let migrating = false; // Guard against double migration
+    let testMode = false; // Easter egg test mode
 
     // === DOM: Auth ===
-    var loadingScreenEl = document.getElementById('loadingScreen');
-    var loginScreenEl = document.getElementById('loginScreen');
-    var dogsScreenEl = document.getElementById('dogsScreen');
-    var appMainEl = document.getElementById('appMain');
-    var googleLoginBtn = document.getElementById('googleLogin');
-    var logoutBtn = document.getElementById('logoutBtn');
-    var logoutBtnDogs = document.getElementById('logoutBtnDogs');
-    var userNameEl = document.getElementById('userName');
-    var userNameDogsEl = document.getElementById('userNameDogs');
-    var dogsListEl = document.getElementById('dogsList');
-    var appDogNameEl = document.getElementById('appDogName');
-    var backToDogsBtn = document.getElementById('backToDogs');
-    var newDogNameEl = document.getElementById('newDogName');
-    var createDogBtnEl = document.getElementById('createDogBtn');
-    var inviteCodeEl = document.getElementById('inviteCode');
-    var joinDogBtnEl = document.getElementById('joinDogBtn');
+    const loadingScreenEl = document.getElementById('loadingScreen');
+    const loginScreenEl = document.getElementById('loginScreen');
+    const dogsScreenEl = document.getElementById('dogsScreen');
+    const appMainEl = document.getElementById('appMain');
+    const googleLoginBtn = document.getElementById('googleLogin');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutBtnDogs = document.getElementById('logoutBtnDogs');
+    const userNameEl = document.getElementById('userName');
+    const userNameDogsEl = document.getElementById('userNameDogs');
+    const dogsListEl = document.getElementById('dogsList');
+    const appDogNameEl = document.getElementById('appDogName');
+    const backToDogsBtn = document.getElementById('backToDogs');
+    const newDogNameEl = document.getElementById('newDogName');
+    const createDogBtnEl = document.getElementById('createDogBtn');
+    const inviteCodeEl = document.getElementById('inviteCode');
+    const joinDogBtnEl = document.getElementById('joinDogBtn');
 
     // === DOM: App ===
-    var stockCountEl = document.getElementById('stockCount');
-    var stockStatusEl = document.getElementById('stockStatus');
-    var nextMorningEl = document.getElementById('nextMorning');
-    var nextEveningEl = document.getElementById('nextEvening');
-    var addQuantityEl = document.getElementById('addQuantity');
-    var addBtnEl = document.getElementById('addBtn');
-    var manualDeductEl = document.getElementById('manualDeduct');
-    var manualAddEl = document.getElementById('manualAdd');
-    var dashHomemadeActionsEl = document.getElementById('dashHomemadeActions');
-    var dashKibbleActionsEl = document.getElementById('dashKibbleActions');
-    var addBagBtnEl = document.getElementById('addBagBtn');
-    var kibbleBagDescEl = document.getElementById('kibbleBagDesc');
-    var kibbleManualDeductEl = document.getElementById('kibbleManualDeduct');
-    var kibbleManualAddEl = document.getElementById('kibbleManualAdd');
-    var feedingSummaryIconEl = document.getElementById('feedingSummaryIcon');
-    var feedingSummaryModeEl = document.getElementById('feedingSummaryMode');
-    var feedingSummaryDetailEl = document.getElementById('feedingSummaryDetail');
-    var historyListEl = document.getElementById('historyList');
-    var lastUpdateEl = document.getElementById('lastUpdate');
-    var toastEl = document.getElementById('toast');
-    var syncStatusEl = document.getElementById('syncStatus');
-    var calcIngredientsEl = document.getElementById('calcIngredients');
-    var calcBtnEl = document.getElementById('calcBtn');
-    var calcResultEl = document.getElementById('calcResult');
-    var calcResultNumberEl = document.getElementById('calcResultNumber');
-    var calcResultDetailEl = document.getElementById('calcResultDetail');
-    var weightInputEl = document.getElementById('weightInput');
-    var weightBtnEl = document.getElementById('weightBtn');
-    var weightLastEl = document.getElementById('weightLast');
-    var weightChartEl = document.getElementById('weightChart');
-    var weightHistoryEl = document.getElementById('weightHistory');
-    var ruptureInfoEl = document.getElementById('ruptureInfo');
-    var shoppingTargetEl = document.getElementById('shoppingTarget');
-    var shoppingBtnEl = document.getElementById('shoppingBtn');
-    var shoppingListEl = document.getElementById('shoppingList');
-    var prepHomemadeEl = document.getElementById('prepHomemade');
-    var prepKibbleEl = document.getElementById('prepKibble');
-    var kibbleInfoEl = document.getElementById('kibbleInfo');
-    var kibbleStockEl = document.getElementById('kibbleStock');
-    var kibbleCalcBtnEl = document.getElementById('kibbleCalcBtn');
-    var kibbleCalcResultEl = document.getElementById('kibbleCalcResult');
-    var kibbleCalcDaysEl = document.getElementById('kibbleCalcDays');
-    var kibbleCalcDetailEl = document.getElementById('kibbleCalcDetail');
-    var kibbleDaysTargetEl = document.getElementById('kibbleDaysTarget');
-    var kibbleShopBtnEl = document.getElementById('kibbleShopBtn');
-    var kibbleShopResultEl = document.getElementById('kibbleShopResult');
-    var vetTypeEl = document.getElementById('vetType');
-    var vetTypeBtnEl = document.getElementById('vetTypeBtn');
-    var vetDescEl = document.getElementById('vetDesc');
-    var vetClinicEl = document.getElementById('vetClinic');
-    var vetDateEl = document.getElementById('vetDate');
-    var vetDateBtnEl = document.getElementById('vetDateBtn');
-    var vetNextDateEl = document.getElementById('vetNextDate');
-    var vetNextDateBtnEl = document.getElementById('vetNextDateBtn');
-    var vetRecurrenceEl = document.getElementById('vetRecurrence');
-    var vetRecurrenceBtnEl = document.getElementById('vetRecurrenceBtn');
-    var vetReminderEl = document.getElementById('vetReminder');
-    var vetReminderBtnEl = document.getElementById('vetReminderBtn');
-    var vetCostEl = document.getElementById('vetCost');
-    var vetNotesEl = document.getElementById('vetNotes');
-    var vetAddBtnEl = document.getElementById('vetAddBtn');
-    var vetFormOverlayEl = document.getElementById('vetFormOverlay');
-    var vetToggleFormBtnEl = document.getElementById('vetToggleFormBtn');
-    var vetCancelBtnEl = document.getElementById('vetCancelBtn');
-    var vetFilterBarEl = document.getElementById('vetFilterBar');
-    var vetUpcomingEl = document.getElementById('vetUpcoming');
-    var vetHistoryEl = document.getElementById('vetHistory');
-    var healthNoteTextEl = document.getElementById('healthNoteText');
-    var healthNoteBtnEl = document.getElementById('healthNoteBtn');
-    var healthNoteFormOverlayEl = document.getElementById('healthNoteFormOverlay');
-    var healthNoteToggleBtnEl = document.getElementById('healthNoteToggleBtn');
-    var healthNoteCancelBtnEl = document.getElementById('healthNoteCancelBtn');
-    var healthNotesListEl = document.getElementById('healthNotesList');
-    var heatStatusEl = document.getElementById('heatStatus');
-    var heatFormEl = document.getElementById('heatForm');
-    var heatActiveEl = document.getElementById('heatActive');
-    var heatStartDateEl = document.getElementById('heatStartDate');
-    var heatEndDateEl = document.getElementById('heatEndDate');
-    var heatStartBtnEl = document.getElementById('heatStartBtn');
-    var heatEndBtnEl = document.getElementById('heatEndBtn');
-    var heatStartDateBtnEl = document.getElementById('heatStartDateBtn');
-    var heatEndDateBtnEl = document.getElementById('heatEndDateBtn');
-    var heatTimelineEl = document.getElementById('heatTimeline');
-    var heatCalendarEl = document.getElementById('heatCalendar');
-    var heatHistoryEl = document.getElementById('heatHistory');
-    var calPrevEl = document.getElementById('calPrev');
-    var calNextEl = document.getElementById('calNext');
-    var calMonthEl = document.getElementById('calMonth');
-    var calendarGridEl = document.getElementById('calendarGrid');
+    const stockCountEl = document.getElementById('stockCount');
+    const stockStatusEl = document.getElementById('stockStatus');
+    const nextMorningEl = document.getElementById('nextMorning');
+    const nextEveningEl = document.getElementById('nextEvening');
+    const addQuantityEl = document.getElementById('addQuantity');
+    const addBtnEl = document.getElementById('addBtn');
+    const manualDeductEl = document.getElementById('manualDeduct');
+    const manualAddEl = document.getElementById('manualAdd');
+    const dashHomemadeActionsEl = document.getElementById('dashHomemadeActions');
+    const dashKibbleActionsEl = document.getElementById('dashKibbleActions');
+    const addBagBtnEl = document.getElementById('addBagBtn');
+    const kibbleBagDescEl = document.getElementById('kibbleBagDesc');
+    const kibbleManualDeductEl = document.getElementById('kibbleManualDeduct');
+    const kibbleManualAddEl = document.getElementById('kibbleManualAdd');
+    const feedingSummaryIconEl = document.getElementById('feedingSummaryIcon');
+    const feedingSummaryModeEl = document.getElementById('feedingSummaryMode');
+    const feedingSummaryDetailEl = document.getElementById('feedingSummaryDetail');
+    const historyListEl = document.getElementById('historyList');
+    const lastUpdateEl = document.getElementById('lastUpdate');
+    const toastEl = document.getElementById('toast');
+    const syncStatusEl = document.getElementById('syncStatus');
+    const calcIngredientsEl = document.getElementById('calcIngredients');
+    const calcBtnEl = document.getElementById('calcBtn');
+    const calcResultEl = document.getElementById('calcResult');
+    const calcResultNumberEl = document.getElementById('calcResultNumber');
+    const calcResultDetailEl = document.getElementById('calcResultDetail');
+    const weightInputEl = document.getElementById('weightInput');
+    const weightBtnEl = document.getElementById('weightBtn');
+    const weightLastEl = document.getElementById('weightLast');
+    const weightChartEl = document.getElementById('weightChart');
+    const weightHistoryEl = document.getElementById('weightHistory');
+    const ruptureInfoEl = document.getElementById('ruptureInfo');
+    const shoppingTargetEl = document.getElementById('shoppingTarget');
+    const shoppingBtnEl = document.getElementById('shoppingBtn');
+    const shoppingListEl = document.getElementById('shoppingList');
+    const prepHomemadeEl = document.getElementById('prepHomemade');
+    const prepKibbleEl = document.getElementById('prepKibble');
+    const kibbleInfoEl = document.getElementById('kibbleInfo');
+    const kibbleStockEl = document.getElementById('kibbleStock');
+    const kibbleCalcBtnEl = document.getElementById('kibbleCalcBtn');
+    const kibbleCalcResultEl = document.getElementById('kibbleCalcResult');
+    const kibbleCalcDaysEl = document.getElementById('kibbleCalcDays');
+    const kibbleCalcDetailEl = document.getElementById('kibbleCalcDetail');
+    const kibbleDaysTargetEl = document.getElementById('kibbleDaysTarget');
+    const kibbleShopBtnEl = document.getElementById('kibbleShopBtn');
+    const kibbleShopResultEl = document.getElementById('kibbleShopResult');
+    const vetTypeEl = document.getElementById('vetType');
+    const vetTypeBtnEl = document.getElementById('vetTypeBtn');
+    const vetDescEl = document.getElementById('vetDesc');
+    const vetClinicEl = document.getElementById('vetClinic');
+    const vetDateEl = document.getElementById('vetDate');
+    const vetDateBtnEl = document.getElementById('vetDateBtn');
+    const vetNextDateEl = document.getElementById('vetNextDate');
+    const vetNextDateBtnEl = document.getElementById('vetNextDateBtn');
+    const vetRecurrenceEl = document.getElementById('vetRecurrence');
+    const vetRecurrenceBtnEl = document.getElementById('vetRecurrenceBtn');
+    const vetReminderEl = document.getElementById('vetReminder');
+    const vetReminderBtnEl = document.getElementById('vetReminderBtn');
+    const vetCostEl = document.getElementById('vetCost');
+    const vetNotesEl = document.getElementById('vetNotes');
+    const vetAddBtnEl = document.getElementById('vetAddBtn');
+    const vetFormOverlayEl = document.getElementById('vetFormOverlay');
+    const vetToggleFormBtnEl = document.getElementById('vetToggleFormBtn');
+    const vetCancelBtnEl = document.getElementById('vetCancelBtn');
+    const vetFilterBarEl = document.getElementById('vetFilterBar');
+    const vetUpcomingEl = document.getElementById('vetUpcoming');
+    const vetHistoryEl = document.getElementById('vetHistory');
+    const healthNoteTextEl = document.getElementById('healthNoteText');
+    const healthNoteBtnEl = document.getElementById('healthNoteBtn');
+    const healthNoteFormOverlayEl = document.getElementById('healthNoteFormOverlay');
+    const healthNoteToggleBtnEl = document.getElementById('healthNoteToggleBtn');
+    const healthNoteCancelBtnEl = document.getElementById('healthNoteCancelBtn');
+    const healthNotesListEl = document.getElementById('healthNotesList');
+    const heatStatusEl = document.getElementById('heatStatus');
+    const heatFormEl = document.getElementById('heatForm');
+    const heatActiveEl = document.getElementById('heatActive');
+    const heatStartDateEl = document.getElementById('heatStartDate');
+    const heatEndDateEl = document.getElementById('heatEndDate');
+    const heatStartBtnEl = document.getElementById('heatStartBtn');
+    const heatEndBtnEl = document.getElementById('heatEndBtn');
+    const heatStartDateBtnEl = document.getElementById('heatStartDateBtn');
+    const heatEndDateBtnEl = document.getElementById('heatEndDateBtn');
+    const heatTimelineEl = document.getElementById('heatTimeline');
+    const heatCalendarEl = document.getElementById('heatCalendar');
+    const heatHistoryEl = document.getElementById('heatHistory');
+    const calPrevEl = document.getElementById('calPrev');
+    const calNextEl = document.getElementById('calNext');
+    const calMonthEl = document.getElementById('calMonth');
+    const calendarGridEl = document.getElementById('calendarGrid');
 
     // === Firebase Init ===
     function initFirebase() {
@@ -196,7 +227,7 @@
                 displayName: 'Luis Piteira',
                 email: 'test@melucafeeder.dev'
             };
-            showToast('ðŸ”§ Modo teste activado');
+            showToast('🔧 Modo teste activado');
             onUserLoggedIn(currentUser);
         }
     }
@@ -281,14 +312,14 @@
         });
     }
 
-    // === Migration: Legacy data â†’ Dog structure ===
+    // === Migration: Legacy data → Dog structure ===
     function checkAndMigrateLegacyData(user) {
         if (migrating) return;
         migrating = true;
 
         db.ref('state').once('value', function (snap) {
             if (snap.exists()) {
-                // Legacy data found â€” migrate to a new dog
+                // Legacy data found — migrate to a new dog
                 migrateToNewDog(user, snap.val());
             } else {
                 migrating = false;
@@ -336,7 +367,7 @@
         }).catch(function (err) {
             migrating = false;
             console.error('Migration error:', err);
-            showToast('Erro na migraÃ§Ã£o');
+            showToast('Erro na migração');
             showDogsScreen();
         });
     }
@@ -353,7 +384,7 @@
     function handleCreateDog() {
         var name = newDogNameEl.value.trim();
         if (!name) {
-            showToast('Introduz o nome do cÃ£o');
+            showToast('Introduz o nome do cão');
             return;
         }
 
@@ -385,7 +416,7 @@
         var breedInput = document.getElementById('setupBreed');
         var birthdayBtn = document.getElementById('setupBirthdayBtn');
         var birthdayInput = document.getElementById('setupBirthday');
-        if (breedBtn) { breedBtn.textContent = 'RaÃ§a'; breedBtn.classList.remove('has-value'); }
+        if (breedBtn) { breedBtn.textContent = 'Raça'; breedBtn.classList.remove('has-value'); }
         if (breedInput) breedInput.value = '';
         if (birthdayBtn) { birthdayBtn.textContent = 'Seleccionar data'; birthdayBtn.classList.remove('has-value'); }
         if (birthdayInput) birthdayInput.value = '';
@@ -412,13 +443,13 @@
         if (homemadeStock) homemadeStock.value = '0';
 
         // Reset and init avatar picker
-        setAvatarPreview('setup', { type: 'icon', value: 'ðŸ•' });
+        setAvatarPreview('setup', { type: 'icon', value: '🐕' });
         initAvatarPicker('setup');
 
         // Get dog name for subtitle
         db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
             var sub = document.getElementById('setupSubtitle');
-            if (sub) sub.textContent = 'Configura o perfil de ' + (snap.val() || 'o teu cÃ£o');
+            if (sub) sub.textContent = 'Configura o perfil de ' + (snap.val() || 'o teu cão');
         });
 
         var rd = resumeData || {};
@@ -596,7 +627,7 @@
                 }
             });
             overlay.style.display = 'none';
-            showToast('AlimentaÃ§Ã£o configurada!');
+            showToast('Alimentação configurada!');
 
             // Start app tour for first-time users
             setTimeout(function () {
@@ -615,7 +646,7 @@
                 feedingMode: 'homemade',
                 recipe: finalRecipe,
                 kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2, bagSize: 12 }
-            }, initialStock, 'Stock inicial: ' + initialStock + ' refeiÃ§Ãµes');
+            }, initialStock, 'Stock inicial: ' + initialStock + ' refeições');
         }
 
         function saveKibble() {
@@ -640,7 +671,7 @@
                     mealsPerDay: mealsPerDay,
                     bagSize: bagSize
                 }
-            }, mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeiÃ§Ãµes)');
+            }, mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeições)');
         }
 
         // Bind events
@@ -649,7 +680,7 @@
 
         // Profile step: breed dropdown + date picker + radio/checkbox interactivity
         document.getElementById('setupBreedBtn').onclick = function () {
-            showDropdown('RaÃ§a', BREED_OPTIONS, document.getElementById('setupBreed').value, function (value) {
+            showDropdown('Raça', BREED_OPTIONS, document.getElementById('setupBreed').value, function (value) {
                 document.getElementById('setupBreed').value = value;
                 document.getElementById('setupBreedBtn').textContent = value;
                 document.getElementById('setupBreedBtn').classList.add('has-value');
@@ -677,7 +708,7 @@
             });
         }
 
-        // Profile â†’ Mode
+        // Profile → Mode
         document.getElementById('setupNextProfile').onclick = function () {
             saveProfileToDB();
             renderProgress(2, wizardMode === 'homemade' ? 4 : 3);
@@ -685,7 +716,7 @@
             saveOnboardingState();
         };
 
-        // Mode â†’ back to profile
+        // Mode → back to profile
         document.getElementById('setupBackMode').onclick = function () {
             renderProgress(1, wizardMode === 'homemade' ? 4 : 3);
             showStep('setupStepProfile');
@@ -756,7 +787,7 @@
 
         // Kibble brand dropdown
         document.getElementById('setupKibbleBrandBtn').onclick = function () {
-            showDropdown('Marca de RaÃ§Ã£o', WIZARD_KIBBLE_BRANDS, document.getElementById('setupKibbleBrand').value, function (value, label) {
+            showDropdown('Marca de Ração', WIZARD_KIBBLE_BRANDS, document.getElementById('setupKibbleBrand').value, function (value, label) {
                 document.getElementById('setupKibbleBrand').value = value;
                 document.getElementById('setupKibbleBrandBtn').textContent = label;
                 document.getElementById('setupKibbleBrandBtn').classList.add('has-value');
@@ -811,18 +842,18 @@
     function handleJoinDog() {
         var code = inviteCodeEl.value.trim().toUpperCase();
         if (!code || code.length < 4) {
-            showToast('CÃ³digo invÃ¡lido');
+            showToast('Código inválido');
             return;
         }
 
         db.ref('invites/' + code).once('value', function (snap) {
             var invite = snap.val();
             if (!invite) {
-                showToast('CÃ³digo nÃ£o encontrado');
+                showToast('Código não encontrado');
                 return;
             }
             if (invite.expiresAt && invite.expiresAt < Date.now()) {
-                showToast('CÃ³digo expirado');
+                showToast('Código expirado');
                 return;
             }
 
@@ -857,10 +888,10 @@
             var p = dog.profile || {};
             var parts = [];
             if (p.breed) parts.push(p.breed);
-            if (p.sex) parts.push(p.sex === 'M' ? 'â™‚ Macho' : 'â™€ FÃªmea');
+            if (p.sex) parts.push(p.sex === 'M' ? '♂ Macho' : '♀ Fêmea');
             if (p.birthday) parts.push(calcAge(p.birthday));
             var subtitleEl = document.getElementById('appDogSubtitle');
-            if (subtitleEl) subtitleEl.textContent = parts.join(' Â· ');
+            if (subtitleEl) subtitleEl.textContent = parts.join(' · ');
 
             // Update header avatar
             updateHeaderAvatar(p.avatar);
@@ -891,7 +922,7 @@
         attachDogListeners(dogId);
     }
 
-    var dogsListRenderToken = 0;
+    let dogsListRenderToken = 0;
 
     function renderDogsList() {
         var dogIds = Object.keys(userDogs);
@@ -899,7 +930,7 @@
         var myToken = dogsListRenderToken;
 
         if (dogIds.length === 0) {
-            dogsListEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Ainda nÃ£o tens nenhum cÃ£o registado.</p>';
+            dogsListEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Ainda não tens nenhum cão registado.</p>';
             return;
         }
 
@@ -918,23 +949,23 @@
                 var p = dog.profile || {};
                 var subtitle = [];
                 if (p.breed) subtitle.push(p.breed);
-                if (p.sex) subtitle.push(p.sex === 'M' ? 'â™‚' : 'â™€');
+                if (p.sex) subtitle.push(p.sex === 'M' ? '♂' : '♀');
                 if (p.birthday) {
                     var age = calcAge(p.birthday);
                     subtitle.push(age);
                 }
-                var subtitleStr = subtitle.length > 0 ? '<div class="dog-card-details">' + escapeHtml(subtitle.join(' Â· ')) + '</div>' : '';
+                var subtitleStr = subtitle.length > 0 ? '<div class="dog-card-details">' + escapeHtml(subtitle.join(' · ')) + '</div>' : '';
 
                 var card = document.createElement('div');
                 card.className = 'dog-card';
                 card.innerHTML = '<div class="dog-card-info">' +
                     '<span class="dog-card-avatar">' + renderDogAvatar(p.avatar) + '</span>' +
-                    '<div><div class="dog-card-name">' + escapeHtml(dog.name || 'CÃ£o') + '</div>' +
+                    '<div><div class="dog-card-name">' + escapeHtml(dog.name || 'Cão') + '</div>' +
                     subtitleStr +
                     '<div class="dog-card-role">' + roleLabel + '</div></div>' +
                     '</div><div class="dog-card-actions">' +
-                    '<button class="btn-delete-dog" title="Remover cÃ£o">ðŸ—‘ï¸</button>' +
-                    '<span class="dog-card-arrow">â€º</span></div>';
+                    '<button class="btn-delete-dog" title="Remover cão">🗑️</button>' +
+                    '<span class="dog-card-arrow">›</span></div>';
 
                 card.addEventListener('click', function () {
                     selectDog(id);
@@ -950,8 +981,8 @@
 
     function handleDeleteDog(dogId, dogName, role) {
         var message = role === 'owner'
-            ? 'Tens a certeza que queres eliminar "' + dogName + '"? Todos os dados (histÃ³rico, peso, saÃºde) serÃ£o apagados permanentemente.'
-            : 'Queres sair de "' + dogName + '"? DeixarÃ¡s de ter acesso a este cÃ£o.';
+            ? 'Tens a certeza que queres eliminar "' + dogName + '"? Todos os dados (histórico, peso, saúde) serão apagados permanentemente.'
+            : 'Queres sair de "' + dogName + '"? Deixarás de ter acesso a este cão.';
 
         showModal(message, function () {
             if (role === 'owner') {
@@ -973,7 +1004,7 @@
                 updates['users/' + currentUser.uid + '/dogs/' + dogId] = null;
                 db.ref().update(updates).then(function () {
                     if (currentDogId === dogId) currentDogId = null;
-                    showToast('SaÃ­ste de ' + dogName);
+                    showToast('Saíste de ' + dogName);
                 });
             }
         });
@@ -1035,7 +1066,7 @@
         overlay.style.display = '';
 
         function renderMonth() {
-            var monthNames = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             label.textContent = monthNames[viewMonth] + ' ' + viewYear;
 
             var firstDay = new Date(viewYear, viewMonth, 1);
@@ -1109,32 +1140,32 @@
 
     // === Custom Dropdown ===
     var BREED_OPTIONS = [
-        'Sem raÃ§a definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
-        'Bichon FrisÃ©', 'Border Collie', 'Boxer', 'Braco AlemÃ£o', 'Bulldog FrancÃªs',
-        'Bulldog InglÃªs', 'Bull Terrier', 'Caniche', 'CÃ£o de Ãgua PortuguÃªs',
-        'CÃ£o de Castro Laboreiro', 'CÃ£o da Serra da Estrela', 'CÃ£o de Fila de SÃ£o Miguel',
-        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'DÃ¡lmata',
+        'Sem raça definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
+        'Bichon Frisé', 'Border Collie', 'Boxer', 'Braco Alemão', 'Bulldog Francês',
+        'Bulldog Inglês', 'Bull Terrier', 'Caniche', 'Cão de Água Português',
+        'Cão de Castro Laboreiro', 'Cão da Serra da Estrela', 'Cão de Fila de São Miguel',
+        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'Dálmata',
         'Dobermann', 'Golden Retriever', 'Husky Siberiano', 'Jack Russell Terrier',
-        'Labrador Retriever', 'Lulu da PomerÃ¢nia', 'Malinois', 'MaltÃªs', 'Pastor AlemÃ£o',
-        'PequinÃªs', 'Perdigueiro PortuguÃªs', 'Pincher Miniatura', 'Pitbull',
-        'Podengo PortuguÃªs', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
-        'SÃ£o Bernardo', 'Schnauzer', 'Setter IrlandÃªs', 'Shar Pei', 'Shiba Inu',
+        'Labrador Retriever', 'Lulu da Pomerânia', 'Malinois', 'Maltês', 'Pastor Alemão',
+        'Pequinês', 'Perdigueiro Português', 'Pincher Miniatura', 'Pitbull',
+        'Podengo Português', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
+        'São Bernardo', 'Schnauzer', 'Setter Irlandês', 'Shar Pei', 'Shiba Inu',
         'Shih Tzu', 'Springer Spaniel', 'Staffordshire Bull Terrier', 'Weimaraner',
         'West Highland Terrier', 'Whippet', 'Yorkshire Terrier', 'Outro'
     ];
 
     var VET_TYPE_OPTIONS = [
-        { value: 'consulta', label: 'ðŸ©º Consulta' },
-        { value: 'vacina', label: 'ðŸ’‰ Vacina' },
-        { value: 'desparasitacao', label: 'ðŸ’Š DesparasitaÃ§Ã£o' },
-        { value: 'cirurgia', label: 'ðŸ¥ Cirurgia' },
-        { value: 'analises', label: 'ðŸ”¬ AnÃ¡lises' },
-        { value: 'medicacao', label: 'ðŸ’Š MedicaÃ§Ã£o contÃ­nua' },
-        { value: 'outro', label: 'ðŸ“‹ Outro' }
+        { value: 'consulta', label: '🩺 Consulta' },
+        { value: 'vacina', label: '💉 Vacina' },
+        { value: 'desparasitacao', label: '💊 Desparasitação' },
+        { value: 'cirurgia', label: '🏥 Cirurgia' },
+        { value: 'analises', label: '🔬 Análises' },
+        { value: 'medicacao', label: '💊 Medicação contínua' },
+        { value: 'outro', label: '📋 Outro' }
     ];
 
     var VET_RECURRENCE_OPTIONS = [
-        { value: '', label: 'Sem recorrÃªncia' },
+        { value: '', label: 'Sem recorrência' },
         { value: '30', label: 'Mensal (30 dias)' },
         { value: '90', label: 'Trimestral (3 meses)' },
         { value: '180', label: 'Semestral (6 meses)' },
@@ -1142,7 +1173,7 @@
     ];
 
     var VET_REMINDER_OPTIONS = [
-        { value: '0', label: 'No prÃ³prio dia' },
+        { value: '0', label: 'No próprio dia' },
         { value: '1', label: '1 dia antes' },
         { value: '3', label: '3 dias antes' },
         { value: '7', label: '1 semana antes' },
@@ -1278,8 +1309,7 @@
         weightRef.orderByChild('date').on('value', function (snapshot) {
             var data = snapshot.val();
             if (data) {
-                weightData = Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); });
-                weightData.sort(function (a, b) {
+                weightData = Object.values(data).sort(function (a, b) {
                     return new Date(a.date) - new Date(b.date);
                 });
             } else {
@@ -1345,10 +1375,17 @@
         return arr.length > 0 ? arr : [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
     }
 
+    function getIngredient(id) {
+        for (var i = 0; i < INGREDIENT_POOL.length; i++) {
+            if (INGREDIENT_POOL[i].id === id) return INGREDIENT_POOL[i];
+        }
+        return { id: id, name: id, icon: '📦', unit: 'g' };
+    }
+
     function renderCalcIngredients() {
         var recipe = migrateRecipe(settings.recipe);
         if (recipe.length === 0) {
-            calcIngredientsEl.innerHTML = '<p class="empty-history">Sem ingredientes na receita. Configura a receita nas definiÃ§Ãµes do cÃ£o.</p>';
+            calcIngredientsEl.innerHTML = '<p class="empty-history">Sem ingredientes na receita. Configura a receita nas definições do cão.</p>';
             return;
         }
         calcIngredientsEl.innerHTML = recipe.map(function (item) {
@@ -1384,12 +1421,13 @@
         var parts = [];
         if (k.brand) {
             var brandLabel = k.brand;
+            var KIBBLE_BRANDS_MAP = { royal_canin: 'Royal Canin', purina_proplan: 'Purina Pro Plan', hills: "Hill's", eukanuba: 'Eukanuba', advance: 'Advance', acana: 'Acana', orijen: 'Orijen', brit_care: 'Brit Care', brit_premium: 'Brit Premium', ownat: 'Ownat', libra: 'Libra', criadores: 'Criadores', gosbi: 'Gosbi', true_instinct: 'True Instinct', taste_wild: 'Taste of the Wild', farmina: 'Farmina N&D', virbac: 'Virbac', specific: 'Specific', nutro: 'Nutro', wolfood: 'Wolfood', prozoo: 'Pro Zoo', ultima: 'Ultima', pedigree: 'Pedigree', friskies: 'Friskies', other: 'Outra' };
             parts.push('<strong>' + escapeHtml(KIBBLE_BRANDS_MAP[k.brand] || k.brand) + '</strong>');
         }
         if (k.amount && k.mealsPerDay) {
-            parts.push(k.amount + 'g Ã— ' + k.mealsPerDay + ' refeiÃ§Ãµes/dia = ' + (k.amount * k.mealsPerDay) + 'g/dia');
+            parts.push(k.amount + 'g × ' + k.mealsPerDay + ' refeições/dia = ' + (k.amount * k.mealsPerDay) + 'g/dia');
         }
-        kibbleInfoEl.innerHTML = parts.length > 0 ? '<div class="kibble-info-card">' + parts.join('<br>') + '</div>' : '<p class="empty-history">Configura a raÃ§Ã£o nas definiÃ§Ãµes do cÃ£o.</p>';
+        kibbleInfoEl.innerHTML = parts.length > 0 ? '<div class="kibble-info-card">' + parts.join('<br>') + '</div>' : '<p class="empty-history">Configura a ração nas definições do cão.</p>';
     }
 
     function handleKibbleCalc() {
@@ -1398,11 +1436,11 @@
         var mealsPerDay = k.mealsPerDay || 2;
         var dailyGrams = amount * mealsPerDay;
         var stockKg = parseFloat(kibbleStockEl.value) || 0;
-        if (stockKg <= 0) { showToast('Introduz a quantidade de raÃ§Ã£o disponÃ­vel'); return; }
+        if (stockKg <= 0) { showToast('Introduz a quantidade de ração disponível'); return; }
         var stockGrams = stockKg * 1000;
         var days = Math.floor(stockGrams / dailyGrams);
         kibbleCalcDaysEl.textContent = days;
-        kibbleCalcDetailEl.innerHTML = stockKg + ' kg Ã· ' + dailyGrams + ' g/dia = ' + days + ' dias<br>(' + (amount * mealsPerDay) + 'g por dia, ' + mealsPerDay + ' refeiÃ§Ãµes de ' + amount + 'g)';
+        kibbleCalcDetailEl.innerHTML = stockKg + ' kg ÷ ' + dailyGrams + ' g/dia = ' + days + ' dias<br>(' + (amount * mealsPerDay) + 'g por dia, ' + mealsPerDay + ' refeições de ' + amount + 'g)';
         kibbleCalcResultEl.style.display = '';
     }
 
@@ -1412,15 +1450,15 @@
         var mealsPerDay = k.mealsPerDay || 2;
         var dailyGrams = amount * mealsPerDay;
         var days = parseInt(kibbleDaysTargetEl.value, 10) || 30;
-        if (days < 1) { showToast('Introduz um nÃºmero vÃ¡lido de dias'); return; }
+        if (days < 1) { showToast('Introduz um número válido de dias'); return; }
         var totalGrams = dailyGrams * days;
         var totalKg = (totalGrams / 1000).toFixed(1);
         kibbleShopResultEl.style.display = '';
         kibbleShopResultEl.innerHTML = '<div class="shopping-header">' + days + ' dias</div>' +
-            '<div class="shopping-item"><span class="shopping-name">ðŸ¥£ RaÃ§Ã£o</span><span class="shopping-amount">' + totalKg + ' kg</span></div>' +
-            '<div class="shopping-item"><span class="shopping-name">ðŸ“¦ Sacos de 2kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 2000) + '</span></div>' +
-            '<div class="shopping-item"><span class="shopping-name">ðŸ“¦ Sacos de 7kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 7000) + '</span></div>' +
-            '<div class="shopping-item"><span class="shopping-name">ðŸ“¦ Sacos de 12kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 12000) + '</span></div>';
+            '<div class="shopping-item"><span class="shopping-name">🥣 Ração</span><span class="shopping-amount">' + totalKg + ' kg</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 2kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 2000) + '</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 7kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 7000) + '</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 12kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 12000) + '</span></div>';
     }
 
     // === Firebase Write ===
@@ -1473,7 +1511,7 @@
         }
 
         if (deducted > 0) {
-            addHistoryEntry('auto', -deducted, 'DeduÃ§Ã£o automÃ¡tica (' + deducted + ' refeiÃ§Ãµes)');
+            addHistoryEntry('auto', -deducted, 'Dedução automática (' + deducted + ' refeições)');
             state.lastProcessed = now.getTime();
             saveState();
             checkAlert();
@@ -1542,9 +1580,9 @@
     // === Alert / Notification ===
     function checkAlert() {
         if (state.stock <= settings.alertThreshold && state.stock > 0) {
-            sendNotification('âš ï¸ MelucaFeeder: Stock baixo! Restam apenas ' + state.stock + ' refeiÃ§Ãµes.');
+            sendNotification('⚠️ MelucaFeeder: Stock baixo! Restam apenas ' + state.stock + ' refeições.');
         } else if (state.stock === 0) {
-            sendNotification('ðŸš¨ MelucaFeeder: Sem refeiÃ§Ãµes em stock! A Meluca precisa de comida!');
+            sendNotification('🚨 MelucaFeeder: Sem refeições em stock! A Meluca precisa de comida!');
         }
     }
 
@@ -1598,7 +1636,7 @@
         } else {
             var mealsPerDay = (settings.feedingMode === 'kibble' && settings.kibble) ? (settings.kibble.mealsPerDay || 2) : 2;
             var days = Math.floor(state.stock / mealsPerDay);
-            stockStatusEl.textContent = 'â‰ˆ ' + days + ' dias de autonomia';
+            stockStatusEl.textContent = '≈ ' + days + ' dias de autonomia';
             stockStatusEl.style.color = '';
         }
 
@@ -1616,7 +1654,7 @@
 
     function renderRuptureInfo() {
         if (state.stock <= 0) {
-            ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponÃ­vel</span>';
+            ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
             return;
         }
         var mealsPerDay = (settings.feedingMode === 'kibble' && settings.kibble) ? (settings.kibble.mealsPerDay || 2) : 2;
@@ -1651,34 +1689,154 @@
         if (!syncStatusEl) return;
         syncStatusEl.className = 'sync-status ' + status;
         var labels = {
-            syncing: 'âŸ³ A sincronizar...',
-            synced: 'âœ“ Sincronizado',
-            error: 'âœ— Erro de sync',
-            offline: 'â—‹ Apenas local'
+            syncing: '⟳ A sincronizar...',
+            synced: '✓ Sincronizado',
+            error: '✗ Erro de sync',
+            offline: '○ Apenas local'
         };
         syncStatusEl.textContent = labels[status] || '';
     }
 
-    // === Dog Avatar (app-specific helpers) ===
+    // === Dog Avatar ===
+    var DOG_ICONS = ['🐕', '🐶', '🐩', '🦮', '🐕‍🦺', '🐾', '🐺', '🦊', '🐻', '🐼', '🦁', '🐯', '🐗', '🐴', '🦄', '🐰', '🐱', '🐈'];
+
+    function initAvatarPicker(prefix) {
+        var preview = document.getElementById(prefix + 'AvatarPreview');
+        var iconEl = document.getElementById(prefix + 'AvatarIcon');
+        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        var fileEl = document.getElementById(prefix + 'AvatarFile');
+        var optionsEl = document.getElementById(prefix + 'AvatarOptions');
+        var gridEl = document.getElementById(prefix + 'AvatarGrid');
+        var photoBtnEl = document.getElementById(prefix + 'AvatarPhotoBtn');
+        if (!preview) return;
+
+        // Build icon grid
+        gridEl.innerHTML = DOG_ICONS.map(function (icon) {
+            var sel = icon === valueEl.value ? ' selected' : '';
+            return '<button type="button" class="avatar-icon-option' + sel + '" data-icon="' + icon + '">' + icon + '</button>';
+        }).join('');
+
+        // Toggle options panel
+        preview.addEventListener('click', function () {
+            optionsEl.style.display = optionsEl.style.display === 'none' ? '' : 'none';
+        });
+
+        // Select icon
+        gridEl.addEventListener('click', function (e) {
+            var btn = e.target.closest('.avatar-icon-option');
+            if (!btn) return;
+            var icon = btn.getAttribute('data-icon');
+            typeEl.value = 'icon';
+            valueEl.value = icon;
+            iconEl.textContent = icon;
+            iconEl.style.display = '';
+            photoEl.style.display = 'none';
+            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
+            btn.classList.add('selected');
+            optionsEl.style.display = 'none';
+        });
+
+        // Photo button
+        photoBtnEl.addEventListener('click', function () {
+            fileEl.click();
+        });
+
+        // Photo file selected
+        fileEl.addEventListener('change', function () {
+            var file = fileEl.files[0];
+            if (!file) return;
+            compressPhoto(file, function (dataUrl) {
+                typeEl.value = 'photo';
+                valueEl.value = dataUrl;
+                photoEl.src = dataUrl;
+                photoEl.style.display = '';
+                iconEl.style.display = 'none';
+                optionsEl.style.display = 'none';
+                gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
+            });
+            fileEl.value = '';
+        });
+    }
+
+    function compressPhoto(file, callback) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var img = new Image();
+            img.onload = function () {
+                var canvas = document.createElement('canvas');
+                var size = 64;
+                canvas.width = size;
+                canvas.height = size;
+                var ctx = canvas.getContext('2d');
+                // Crop to square from center
+                var sx = 0, sy = 0, sw = img.width, sh = img.height;
+                if (sw > sh) { sx = (sw - sh) / 2; sw = sh; }
+                else { sy = (sh - sw) / 2; sh = sw; }
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function setAvatarPreview(prefix, avatar) {
+        var iconEl = document.getElementById(prefix + 'AvatarIcon');
+        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        if (!iconEl) return;
+        var a = avatar || { type: 'icon', value: '🐕' };
+        typeEl.value = a.type;
+        valueEl.value = a.value;
+        if (a.type === 'photo') {
+            photoEl.src = a.value;
+            photoEl.style.display = '';
+            iconEl.style.display = 'none';
+        } else {
+            iconEl.textContent = a.value || '🐕';
+            iconEl.style.display = '';
+            photoEl.style.display = 'none';
+        }
+        // Update grid selection
+        var gridEl = document.getElementById(prefix + 'AvatarGrid');
+        if (gridEl) {
+            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) {
+                if (a.type === 'icon' && b.getAttribute('data-icon') === a.value) b.classList.add('selected');
+                else b.classList.remove('selected');
+            });
+        }
+    }
+
+    function getAvatarFromPicker(prefix) {
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        if (!typeEl) return { type: 'icon', value: '🐕' };
+        return { type: typeEl.value, value: valueEl.value };
+    }
+
     function renderDogAvatar(avatar) {
-        var a = avatar || { type: 'icon', value: 'ðŸ•' };
+        var a = avatar || { type: 'icon', value: '🐕' };
         if (a.type === 'photo') {
             return '<img src="' + a.value + '" alt="">';
         }
-        return a.value || 'ðŸ•';
+        return a.value || '🐕';
     }
 
     function updateHeaderAvatar(avatar) {
         var iconEl = document.getElementById('headerAvatarIcon');
         var photoEl = document.getElementById('headerAvatarPhoto');
         if (!iconEl) return;
-        var a = avatar || { type: 'icon', value: 'ðŸ•' };
+        var a = avatar || { type: 'icon', value: '🐕' };
         if (a.type === 'photo') {
             photoEl.src = a.value;
             photoEl.style.display = '';
             iconEl.style.display = 'none';
         } else {
-            iconEl.textContent = a.value || 'ðŸ•';
+            iconEl.textContent = a.value || '🐕';
             iconEl.style.display = '';
             photoEl.style.display = 'none';
         }
@@ -1688,28 +1846,28 @@
     var TOUR_STEPS = [
         {
             target: '.feeding-summary-card',
-            title: 'ðŸ“‹ Modo de alimentaÃ§Ã£o',
-            text: 'Aqui vÃªs o tipo de alimentaÃ§Ã£o configurado para o teu cÃ£o. Podes alterar nas definiÃ§Ãµes a qualquer momento.'
+            title: '📋 Modo de alimentação',
+            text: 'Aqui vês o tipo de alimentação configurado para o teu cão. Podes alterar nas definições a qualquer momento.'
         },
         {
             target: '.stock-section',
-            title: 'ðŸ½ï¸ Stock de refeiÃ§Ãµes',
-            text: 'O coraÃ§Ã£o da app. Mostra quantas refeiÃ§Ãµes tens disponÃ­veis e quando o stock se esgota.'
+            title: '🍽️ Stock de refeições',
+            text: 'O coração da app. Mostra quantas refeições tens disponíveis e quando o stock se esgota.'
         },
         {
             target: '#dashHomemadeActions, #dashKibbleActions',
-            title: 'âž• Gerir stock',
-            text: 'Adiciona produÃ§Ã£o quando preparas refeiÃ§Ãµes, ou faz ajustes manuais ao stock.'
+            title: '➕ Gerir stock',
+            text: 'Adiciona produção quando preparas refeições, ou faz ajustes manuais ao stock.'
         },
         {
             target: '.tabs',
-            title: 'ðŸ§­ SecÃ§Ãµes da app',
-            text: 'Navega entre o Dashboard, PreparaÃ§Ã£o (calculadora e listas de compras), Peso, SaÃºde e Cio.'
+            title: '🧭 Secções da app',
+            text: 'Navega entre o Dashboard, Preparação (calculadora e listas de compras), Peso, Saúde e Cio.'
         },
         {
             target: '#settingsBtn',
-            title: 'âš™ï¸ ConfiguraÃ§Ãµes',
-            text: 'Personaliza a receita, alertas, Telegram, perfil do cÃ£o e convida outros membros.'
+            title: '⚙️ Configurações',
+            text: 'Personaliza a receita, alertas, Telegram, perfil do cão e convida outros membros.'
         }
     ];
 
@@ -1800,21 +1958,9 @@
             }, 450);
         }
 
-        function handleTourResize() {
-            if (overlay.style.display !== 'none') {
-                var step = TOUR_STEPS[currentStep];
-                var el = getVisibleTarget(step.target);
-                if (el) {
-                    positionSpotlight(el);
-                    positionTooltip(el);
-                }
-            }
-        }
-
         function endTour() {
             overlay.style.display = 'none';
             document.body.classList.remove('tour-active');
-            window.removeEventListener('resize', handleTourResize);
             if (currentDogId) {
                 db.ref('dogs/' + currentDogId + '/tourComplete/' + currentUser.uid).set(true);
             }
@@ -1840,7 +1986,16 @@
         });
 
         // Reposition on resize
-        window.addEventListener('resize', handleTourResize);
+        window.addEventListener('resize', function () {
+            if (overlay.style.display !== 'none') {
+                var step = TOUR_STEPS[currentStep];
+                var el = getVisibleTarget(step.target);
+                if (el) {
+                    positionSpotlight(el);
+                    positionTooltip(el);
+                }
+            }
+        });
 
         document.body.classList.add('tour-active');
         overlay.style.display = '';
@@ -1895,9 +2050,6 @@
         vetCancelBtnEl.addEventListener('click', function () {
             vetFormOverlayEl.style.display = 'none';
         });
-        vetFormOverlayEl.addEventListener('click', function (e) {
-            if (e.target === vetFormOverlayEl) vetFormOverlayEl.style.display = 'none';
-        });
         healthNoteBtnEl.addEventListener('click', handleHealthNote);
         healthNoteToggleBtnEl.addEventListener('click', function () {
             healthNoteFormOverlayEl.style.display = '';
@@ -1905,9 +2057,6 @@
         });
         healthNoteCancelBtnEl.addEventListener('click', function () {
             healthNoteFormOverlayEl.style.display = 'none';
-        });
-        healthNoteFormOverlayEl.addEventListener('click', function (e) {
-            if (e.target === healthNoteFormOverlayEl) healthNoteFormOverlayEl.style.display = 'none';
         });
         healthNoteTextEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleHealthNote();
@@ -1923,7 +2072,7 @@
         });
 
         vetRecurrenceBtnEl.addEventListener('click', function () {
-            showDropdown('RecorrÃªncia', VET_RECURRENCE_OPTIONS, vetRecurrenceEl.value, function (value, label) {
+            showDropdown('Recorrência', VET_RECURRENCE_OPTIONS, vetRecurrenceEl.value, function (value, label) {
                 vetRecurrenceEl.value = value;
                 vetRecurrenceBtnEl.textContent = label;
                 if (value) vetRecurrenceBtnEl.classList.add('has-value');
@@ -2031,7 +2180,7 @@
             if (item.amount > 0 && available > 0) {
                 var m = Math.floor(available / item.amount);
                 meals.push(m);
-                details.push(ing.icon + ' ' + ing.name + ': ' + m + ' refeiÃ§Ãµes (' + item.amount + ' ' + ing.unit + '/ref)');
+                details.push(ing.icon + ' ' + ing.name + ': ' + m + ' refeições (' + item.amount + ' ' + ing.unit + '/ref)');
             }
         });
 
@@ -2049,40 +2198,40 @@
     function handleAdd() {
         var qty = parseInt(addQuantityEl.value, 10);
         if (isNaN(qty) || qty < 1) {
-            showToast('Introduz uma quantidade vÃ¡lida');
+            showToast('Introduz uma quantidade válida');
             return;
         }
 
         state.stock += qty;
         state.lastProcessed = Date.now();
         saveState();
-        addHistoryEntry('production', qty, 'ProduÃ§Ã£o: +' + qty + ' refeiÃ§Ãµes');
+        addHistoryEntry('production', qty, 'Produção: +' + qty + ' refeições');
         addQuantityEl.value = '1';
         render();
-        showToast('+' + qty + ' refeiÃ§Ãµes adicionadas');
+        showToast('+' + qty + ' refeições adicionadas');
     }
 
     function handleManualDeduct() {
         if (state.stock <= 0) {
-            showToast('Stock jÃ¡ estÃ¡ a zero');
+            showToast('Stock já está a zero');
             return;
         }
         state.stock--;
         state.lastProcessed = Date.now();
         saveState();
-        addHistoryEntry('manual', -1, 'DeduÃ§Ã£o manual');
+        addHistoryEntry('manual', -1, 'Dedução manual');
         render();
         checkAlert();
-        showToast('1 refeiÃ§Ã£o removida');
+        showToast('1 refeição removida');
     }
 
     function handleManualAdd() {
         state.stock++;
         state.lastProcessed = Date.now();
         saveState();
-        addHistoryEntry('manual', 1, 'AdiÃ§Ã£o manual');
+        addHistoryEntry('manual', 1, 'Adição manual');
         render();
-        showToast('1 refeiÃ§Ã£o adicionada');
+        showToast('1 refeição adicionada');
     }
 
     function handleAddBag() {
@@ -2095,9 +2244,9 @@
         state.stock += mealsFromBag;
         state.lastProcessed = Date.now();
         saveState();
-        addHistoryEntry('production', mealsFromBag, 'Saca ' + bagSize + 'kg: +' + mealsFromBag + ' refeiÃ§Ãµes');
+        addHistoryEntry('production', mealsFromBag, 'Saca ' + bagSize + 'kg: +' + mealsFromBag + ' refeições');
         render();
-        showToast('+' + mealsFromBag + ' refeiÃ§Ãµes (' + bagSize + 'kg)');
+        showToast('+' + mealsFromBag + ' refeições (' + bagSize + 'kg)');
     }
 
     function updateDashboardMode() {
@@ -2109,19 +2258,20 @@
         if (mode === 'kibble') {
             var k = settings.kibble || {};
             var bagSize = k.bagSize || 12;
-            kibbleBagDescEl.textContent = 'Saca de ' + bagSize + ' kg (' + Math.floor((bagSize * 1000) / (k.amount || 150)) + ' refeiÃ§Ãµes)';
-            feedingSummaryIconEl.textContent = 'ðŸ¥£';
-            feedingSummaryModeEl.textContent = 'RaÃ§Ã£o';
+            kibbleBagDescEl.textContent = 'Saca de ' + bagSize + ' kg (' + Math.floor((bagSize * 1000) / (k.amount || 150)) + ' refeições)';
+            feedingSummaryIconEl.textContent = '🥣';
+            feedingSummaryModeEl.textContent = 'Ração';
             var parts = [];
+            var KIBBLE_BRANDS_MAP = { royal_canin: 'Royal Canin', purina_proplan: 'Purina Pro Plan', hills: "Hill's", eukanuba: 'Eukanuba', advance: 'Advance', acana: 'Acana', orijen: 'Orijen', brit_care: 'Brit Care', brit_premium: 'Brit Premium', ownat: 'Ownat', libra: 'Libra', criadores: 'Criadores', gosbi: 'Gosbi', true_instinct: 'True Instinct', taste_wild: 'Taste of the Wild', farmina: 'Farmina N&D', virbac: 'Virbac', specific: 'Specific', nutro: 'Nutro', wolfood: 'Wolfood', prozoo: 'Pro Zoo', ultima: 'Ultima', pedigree: 'Pedigree', friskies: 'Friskies', other: 'Outra' };
             if (k.brand) parts.push(KIBBLE_BRANDS_MAP[k.brand] || k.brand);
-            if (k.amount && k.mealsPerDay) parts.push(k.amount + 'g Ã— ' + k.mealsPerDay + '/dia');
-            feedingSummaryDetailEl.textContent = parts.length > 0 ? parts.join(' Â· ') : 'Configurar nas definiÃ§Ãµes';
+            if (k.amount && k.mealsPerDay) parts.push(k.amount + 'g × ' + k.mealsPerDay + '/dia');
+            feedingSummaryDetailEl.textContent = parts.length > 0 ? parts.join(' · ') : 'Configurar nas definições';
         } else {
-            feedingSummaryIconEl.textContent = 'ðŸ³';
+            feedingSummaryIconEl.textContent = '🍳';
             feedingSummaryModeEl.textContent = 'Caseira';
             var recipe = migrateRecipe(settings.recipe);
             var count = recipe.filter(function (r) { return r.amount > 0; }).length;
-            feedingSummaryDetailEl.textContent = count > 0 ? count + ' ingredientes por refeiÃ§Ã£o' : 'Configurar receita';
+            feedingSummaryDetailEl.textContent = count > 0 ? count + ' ingredientes por refeição' : 'Configurar receita';
         }
     }
 
@@ -2129,7 +2279,7 @@
     function handleShoppingList() {
         var target = parseInt(shoppingTargetEl.value, 10);
         if (isNaN(target) || target < 1) {
-            showToast('Introduz um nÃºmero vÃ¡lido de refeiÃ§Ãµes');
+            showToast('Introduz um número válido de refeições');
             return;
         }
 
@@ -2152,7 +2302,7 @@
         });
 
         shoppingListEl.style.display = '';
-        shoppingListEl.innerHTML = '<div class="shopping-header">' + target + ' refeiÃ§Ãµes</div>' +
+        shoppingListEl.innerHTML = '<div class="shopping-header">' + target + ' refeições</div>' +
             items.map(function (item) {
                 return '<div class="shopping-item"><span class="shopping-name">' + item.name + '</span><span class="shopping-amount">' + item.display + '</span></div>';
             }).join('');
@@ -2170,7 +2320,7 @@
         var recurrence = vetRecurrenceEl.value ? parseInt(vetRecurrenceEl.value, 10) : null;
         var reminderDays = parseInt(vetReminderEl.value, 10) || 0;
 
-        if (!desc) { showToast('Adiciona uma descriÃ§Ã£o'); return; }
+        if (!desc) { showToast('Adiciona uma descrição'); return; }
         if (!date) { showToast('Selecciona a data'); return; }
 
         // Auto-calculate nextDate from recurrence if not manually set
@@ -2203,17 +2353,17 @@
         vetNextDateBtnEl.textContent = 'Seleccionar data';
         vetNextDateBtnEl.classList.remove('has-value');
         vetRecurrenceEl.value = '';
-        vetRecurrenceBtnEl.textContent = 'Sem recorrÃªncia';
+        vetRecurrenceBtnEl.textContent = 'Sem recorrência';
         vetRecurrenceBtnEl.classList.remove('has-value');
         vetReminderEl.value = '1';
         vetReminderBtnEl.textContent = '1 dia antes';
         vetTypeEl.value = 'consulta';
-        vetTypeBtnEl.textContent = 'ðŸ©º Consulta';
+        vetTypeBtnEl.textContent = '🩺 Consulta';
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
         vetFormOverlayEl.style.display = 'none';
-        showToast('Registo veterinÃ¡rio adicionado');
+        showToast('Registo veterinário adicionado');
     }
 
     function deleteVetEntry(id, desc) {
@@ -2224,7 +2374,7 @@
     }
 
     function renderVet() {
-        var typeLabels = { consulta: 'ðŸ©º Consulta', vacina: 'ðŸ’‰ Vacina', desparasitacao: 'ðŸ’Š DesparasitaÃ§Ã£o', cirurgia: 'ðŸ¥ Cirurgia', analises: 'ðŸ”¬ AnÃ¡lises', medicacao: 'ðŸ’Š MedicaÃ§Ã£o', outro: 'ðŸ“‹ Outro' };
+        var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '💊 Desparasitação', cirurgia: '🏥 Cirurgia', analises: '🔬 Análises', medicacao: '💊 Medicação', outro: '📋 Outro' };
         var today = new Date().toISOString().slice(0, 10);
 
         // Render filter bar
@@ -2256,7 +2406,7 @@
             .sort(function (a, b) { return a.nextDate.localeCompare(b.nextDate); });
 
         if (upcoming.length > 0) {
-            vetUpcomingEl.innerHTML = '<h3>PrÃ³ximos</h3>';
+            vetUpcomingEl.innerHTML = '<h3>Próximos</h3>';
             upcoming.forEach(function (e) {
                 vetUpcomingEl.appendChild(buildVetItem(e, typeLabels, true));
             });
@@ -2265,10 +2415,10 @@
         }
 
         if (filtered.length === 0) {
-            vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinÃ¡rios</p>';
+            vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
             return;
         }
-        vetHistoryEl.innerHTML = '<h3>HistÃ³rico</h3>';
+        vetHistoryEl.innerHTML = '<h3>Histórico</h3>';
         filtered.slice(0, 30).forEach(function (e) {
             vetHistoryEl.appendChild(buildVetItem(e, typeLabels, false));
         });
@@ -2283,17 +2433,17 @@
             '<span class="vet-type">' + (typeLabels[e.type] || e.type) + '</span>' +
             '<span class="vet-item-desc">' + escapeHtml(e.description) + '</span>' +
             '<span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span>' +
-            '<button class="btn-delete-entry" title="Apagar">ðŸ—‘ï¸</button>' +
+            '<button class="btn-delete-entry" title="Apagar">🗑️</button>' +
             '</div>';
 
         var detailParts = [];
-        if (e.clinic) detailParts.push('<span>ðŸ“ ' + escapeHtml(e.clinic) + '</span>');
-        if (e.cost != null) detailParts.push('<span>ðŸ’° ' + e.cost.toFixed(2) + ' â‚¬</span>');
+        if (e.clinic) detailParts.push('<span>📍 ' + escapeHtml(e.clinic) + '</span>');
+        if (e.cost != null) detailParts.push('<span>💰 ' + e.cost.toFixed(2) + ' €</span>');
         if (e.recurrence) {
             var recLabel = { 30: 'Mensal', 90: 'Trimestral', 180: 'Semestral', 365: 'Anual' };
-            detailParts.push('<span>ðŸ”„ ' + (recLabel[e.recurrence] || e.recurrence + ' dias') + '</span>');
+            detailParts.push('<span>🔄 ' + (recLabel[e.recurrence] || e.recurrence + ' dias') + '</span>');
         }
-        if (e.notes) detailParts.push('<span class="vet-item-notes">ðŸ“ ' + escapeHtml(e.notes) + '</span>');
+        if (e.notes) detailParts.push('<span class="vet-item-notes">📝 ' + escapeHtml(e.notes) + '</span>');
 
         var detailHtml = detailParts.length > 0 ? '<div class="vet-item-details">' + detailParts.join('') + '</div>' : '';
 
@@ -2318,14 +2468,14 @@
             var diffDays = Math.ceil((nextMs - today.getTime()) / 86400000);
             var remind = e.reminderDays != null ? e.reminderDays : 1;
             if (diffDays >= 0 && diffDays <= remind) {
-                var when = diffDays === 0 ? 'HOJE' : (diffDays === 1 ? 'AMANHÃƒ' : 'em ' + diffDays + ' dias');
+                var when = diffDays === 0 ? 'HOJE' : (diffDays === 1 ? 'AMANHÃ' : 'em ' + diffDays + ' dias');
                 msgs.push(when + ': ' + e.description);
             }
         });
 
         if (msgs.length > 0) {
             localStorage.setItem(reminderKey, '1');
-            sendNotification('ðŸ¥ MelucaFeeder: Lembretes veterinÃ¡rios\n' + msgs.join('\n'));
+            sendNotification('🏥 MelucaFeeder: Lembretes veterinários\n' + msgs.join('\n'));
         }
     }
 
@@ -2349,7 +2499,7 @@
 
     function renderHealthNotes() {
         if (healthNotes.length === 0) {
-            healthNotesListEl.innerHTML = '<p class="empty-history">Sem notas de saÃºde</p>';
+            healthNotesListEl.innerHTML = '<p class="empty-history">Sem notas de saúde</p>';
             return;
         }
         healthNotesListEl.innerHTML = '';
@@ -2358,7 +2508,7 @@
             var div = document.createElement('div');
             div.className = 'health-note-item';
             div.innerHTML = '<span class="health-note-text">' + escapeHtml(e.text) + '</span><span class="date">' + formatDateTime(d) +
-                '</span><button class="btn-delete-entry" title="Apagar">ðŸ—‘ï¸</button>';
+                '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
             div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteHealthNote(e.id, e.text); });
             healthNotesListEl.appendChild(div);
         });
@@ -2367,8 +2517,8 @@
     // === Heat Cycle ===
     // Typical cycle phases (days from start):
     // Proestro (sangramento): ~9 days
-    // Estro (fÃ©rtil): day 9-15 (~6 days)
-    // Diestro (pÃ³s-cio): day 15-75 (~60 days)
+    // Estro (fértil): day 9-15 (~6 days)
+    // Diestro (pós-cio): day 15-75 (~60 days)
     // Anestro (repouso): until next cycle (~4-8 months total between cios)
     var HEAT_BLEED_DAYS = 9;
     var HEAT_FERTILE_START = 9;
@@ -2377,7 +2527,7 @@
 
     function handleHeatStart() {
         var dateStr = heatStartDateEl.value;
-        if (!dateStr) { showToast('Selecciona a data de inÃ­cio'); return; }
+        if (!dateStr) { showToast('Selecciona a data de início'); return; }
         if (db && currentDogId) {
             dogRef('heatCycles').push({
                 startDate: dateStr,
@@ -2425,10 +2575,6 @@
             heatStartDateEl.value = '';
         }
 
-        // Remove stale prediction elements before re-rendering
-        var oldPred = document.querySelector('.heat-next-prediction');
-        if (oldPred) oldPred.remove();
-
         // Timeline
         renderHeatTimeline(activeCycle, lastCompleted);
 
@@ -2450,26 +2596,26 @@
 
             var phase, phaseClass;
             if (daysSinceStart < HEAT_BLEED_DAYS) {
-                phase = 'ðŸ©¸ Sangramento (Proestro)';
+                phase = '🩸 Sangramento (Proestro)';
                 phaseClass = 'bleeding';
             } else if (daysSinceStart < HEAT_FERTILE_END) {
-                phase = 'âš ï¸ PerÃ­odo FÃ©rtil (Estro)';
+                phase = '⚠️ Período Fértil (Estro)';
                 phaseClass = 'fertile';
             } else {
-                phase = 'ðŸ’œ PÃ³s-cio (Diestro)';
+                phase = '💜 Pós-cio (Diestro)';
                 phaseClass = 'diestrus';
             }
 
             heatStatusEl.innerHTML = '<div class="heat-status-card" style="border-color:' + getPhaseColor(phaseClass) + '">' +
                 '<div class="heat-status-phase">' + phase + '</div>' +
-                '<div class="heat-status-detail">Dia ' + (daysSinceStart + 1) + ' desde inÃ­cio (' + formatDateShort(start) + ')</div>' +
+                '<div class="heat-status-detail">Dia ' + (daysSinceStart + 1) + ' desde início (' + formatDateShort(start) + ')</div>' +
                 '</div>';
         } else if (lastCompleted) {
             var lastStart = new Date(lastCompleted.startDate);
             var daysSince = Math.floor((new Date() - lastStart) / 86400000);
             heatStatusEl.innerHTML = '<div class="heat-status-card">' +
-                '<div class="heat-status-phase">ðŸ˜´ Anestro (Repouso)</div>' +
-                '<div class="heat-status-detail">' + daysSince + ' dias desde o Ãºltimo cio</div>' +
+                '<div class="heat-status-phase">😴 Anestro (Repouso)</div>' +
+                '<div class="heat-status-detail">' + daysSince + ' dias desde o último cio</div>' +
                 '</div>';
         } else {
             heatStatusEl.innerHTML = '<div class="heat-status-card">' +
@@ -2494,12 +2640,12 @@
 
         heatTimelineEl.innerHTML = '<div class="heat-phase-bar">' +
             '<div class="heat-phase-segment bleeding" style="flex:' + bleedDays + '">Sangramento (' + bleedDays + 'd)</div>' +
-            '<div class="heat-phase-segment fertile" style="flex:' + fertileDays + '">FÃ©rtil (' + fertileDays + 'd)</div>' +
+            '<div class="heat-phase-segment fertile" style="flex:' + fertileDays + '">Fértil (' + fertileDays + 'd)</div>' +
             '<div class="heat-phase-segment diestrus" style="flex:' + diestrusDays + '">Diestro (' + diestrusDays + 'd)</div>' +
             '</div>' +
             '<div class="heat-phase-legend">' +
             '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#ef4444"></span> Sangramento</span>' +
-            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#f59e0b"></span> FÃ©rtil</span>' +
+            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#f59e0b"></span> Fértil</span>' +
             '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#6366f1"></span> Diestro</span>' +
             '</div>';
     }
@@ -2537,7 +2683,7 @@
             d.setDate(d.getDate() + 1);
         }
 
-        var monthNames = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         var weekdays = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
         var html = '';
@@ -2562,8 +2708,7 @@
             heatHistoryEl.innerHTML = '<p class="empty-history">Sem registos</p>';
             return;
         }
-        heatHistoryEl.innerHTML = '';
-        heatCycles.forEach(function (c) {
+        heatHistoryEl.innerHTML = heatCycles.map(function (c) {
             var start = formatDateShort(new Date(c.startDate));
             var end = c.endDate ? formatDateShort(new Date(c.endDate)) : 'em curso';
             var duration = '';
@@ -2571,21 +2716,11 @@
                 var days = Math.floor((new Date(c.endDate) - new Date(c.startDate)) / 86400000);
                 duration = days + ' dias de sangramento';
             }
-            var div = document.createElement('div');
-            div.className = 'heat-history-item';
-            div.innerHTML = '<span class="heat-history-dates">' + start + ' â†’ ' + end + '</span>' +
+            return '<div class="heat-history-item">' +
+                '<span class="heat-history-dates">' + start + ' → ' + end + '</span>' +
                 '<span class="heat-history-duration">' + duration + '</span>' +
-                '<button class="btn-delete-entry" title="Apagar">ðŸ—‘ï¸</button>';
-            div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteHeatCycle(c.id, start); });
-            heatHistoryEl.appendChild(div);
-        });
-    }
-
-    function deleteHeatCycle(id, startDate) {
-        showModal('Apagar ciclo de ' + startDate + '?', function () {
-            if (db && currentDogId) dogRef('heatCycles/' + id).remove();
-            showToast('Ciclo apagado');
-        });
+                '</div>';
+        }).join('');
     }
 
     function renderHeatPrediction(lastCompleted) {
@@ -2611,12 +2746,12 @@
 
         var predHtml = '<div class="heat-next-prediction">';
         if (daysUntil > 0) {
-            predHtml += 'ðŸ“… PrÃ³ximo cio previsto: <strong>' + formatDateShort(nextDate) + '</strong> (daqui a ~' + daysUntil + ' dias)';
+            predHtml += '📅 Próximo cio previsto: <strong>' + formatDateShort(nextDate) + '</strong> (daqui a ~' + daysUntil + ' dias)';
         } else {
-            predHtml += 'âš ï¸ PrÃ³ximo cio previsto para <strong>' + formatDateShort(nextDate) + '</strong> (pode estar atrasado)';
+            predHtml += '⚠️ Próximo cio previsto para <strong>' + formatDateShort(nextDate) + '</strong> (pode estar atrasado)';
         }
         if (intervals.length > 0) {
-            predHtml += '<br><span style="font-size:0.75rem;color:var(--text-muted)">Intervalo mÃ©dio: ' + avgInterval + ' dias</span>';
+            predHtml += '<br><span style="font-size:0.75rem;color:var(--text-muted)">Intervalo médio: ' + avgInterval + ' dias</span>';
         }
         predHtml += '</div>';
 
@@ -2642,7 +2777,7 @@
 
     // === Meal Calendar ===
     function renderCalendar() {
-        var monthNames = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         calMonthEl.textContent = monthNames[calendarMonth] + ' ' + calendarYear;
 
         var lastDay = new Date(calendarYear, calendarMonth + 1, 0);
@@ -2683,7 +2818,7 @@
     function handleWeightAdd() {
         var weight = parseFloat(weightInputEl.value);
         if (isNaN(weight) || weight <= 0) {
-            showToast('Introduz um peso vÃ¡lido');
+            showToast('Introduz um peso válido');
             return;
         }
 
@@ -2692,13 +2827,6 @@
         }
         weightInputEl.value = '';
         showToast(weight + ' kg registado');
-    }
-
-    function deleteWeightEntry(id, weight) {
-        showModal('Apagar registo de ' + weight + ' kg?', function () {
-            if (db && currentDogId) dogRef('weight/' + id).remove();
-            showToast('Registo de peso apagado');
-        });
     }
 
     function renderWeight() {
@@ -2712,19 +2840,14 @@
         var last = weightData[weightData.length - 1];
         var lastDate = new Date(last.date);
         var daysAgo = Math.floor((Date.now() - lastDate.getTime()) / 86400000);
-        var daysText = daysAgo === 0 ? 'hoje' : daysAgo === 1 ? 'ontem' : 'hÃ¡ ' + daysAgo + ' dias';
+        var daysText = daysAgo === 0 ? 'hoje' : daysAgo === 1 ? 'ontem' : 'há ' + daysAgo + ' dias';
         weightLastEl.innerHTML = '<span class="weight-current">' + last.weight + ' kg</span> <span class="weight-date">(' + daysText + ')</span>';
 
         var recent = weightData.slice(-10).reverse();
-        weightHistoryEl.innerHTML = '';
-        recent.forEach(function (e) {
+        weightHistoryEl.innerHTML = recent.map(function (e) {
             var d = new Date(e.date);
-            var div = document.createElement('div');
-            div.className = 'weight-entry';
-            div.innerHTML = '<span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span><button class="btn-delete-entry" title="Apagar">ðŸ—‘ï¸</button>';
-            div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteWeightEntry(e.id, e.weight); });
-            weightHistoryEl.appendChild(div);
-        });
+            return '<div class="weight-entry"><span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span></div>';
+        }).join('');
 
         drawChart();
     }
@@ -2755,7 +2878,7 @@
             ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
             ctx.font = '12px -apple-system, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Regista pelo menos 2 pesos para ver o grÃ¡fico', w / 2, h / 2);
+            ctx.fillText('Regista pelo menos 2 pesos para ver o gráfico', w / 2, h / 2);
             return;
         }
 
@@ -2856,7 +2979,7 @@
 
         if (daysSince >= 7 && lastReminder !== today) {
             localStorage.setItem(reminderKey, today);
-            sendNotification('âš–ï¸ MelucaFeeder: JÃ¡ passaram ' + daysSince + ' dias desde a Ãºltima pesagem. Hora de pesar!');
+            sendNotification('⚖️ MelucaFeeder: Já passaram ' + daysSince + ' dias desde a última pesagem. Hora de pesar!');
         }
     }
 
@@ -2905,7 +3028,7 @@
         if (now.getDate() < b.getDate()) months--;
         if (months < 0) months = 0;
         if (years >= 1) return years + (years === 1 ? ' ano' : ' anos');
-        return months + (months === 1 ? ' mÃªs' : ' meses');
+        return months + (months === 1 ? ' mês' : ' meses');
     }
 
     function showToast(message) {
@@ -2920,7 +3043,7 @@
         var themeToggle = document.getElementById('themeToggle');
         if (saved === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
-            themeToggle.textContent = 'â˜€ï¸';
+            themeToggle.textContent = '☀️';
         }
 
         themeToggle.addEventListener('click', function () {
@@ -2928,11 +3051,11 @@
             if (current === 'light') {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('melucafeeder_theme', 'dark');
-                themeToggle.textContent = 'ðŸŒ™';
+                themeToggle.textContent = '🌙';
             } else {
                 document.documentElement.setAttribute('data-theme', 'light');
                 localStorage.setItem('melucafeeder_theme', 'light');
-                themeToggle.textContent = 'â˜€ï¸';
+                themeToggle.textContent = '☀️';
             }
         });
     }

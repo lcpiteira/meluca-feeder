@@ -2335,7 +2335,7 @@ section h2 {
     font-weight: 500;
     opacity: 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-    z-index: 3000;
+    z-index: 1000;
     max-width: 90%;
     text-align: center;
     border: 1px solid var(--card-border);
