@@ -45,6 +45,7 @@
     const profileNameEl = document.getElementById('profileName');
     const profileBreedEl = document.getElementById('profileBreed');
     const profileBirthdayEl = document.getElementById('profileBirthday');
+    const profileBirthdayBtnEl = document.getElementById('profileBirthdayBtn');
     const profileColorEl = document.getElementById('profileColor');
     const profileNeuteredEl = document.getElementById('profileNeutered');
     const profileChipEl = document.getElementById('profileChip');
@@ -123,6 +124,13 @@
         profileNameEl.value = name || '';
         profileBreedEl.value = p.breed || '';
         profileBirthdayEl.value = p.birthday || '';
+        if (p.birthday) {
+            profileBirthdayBtnEl.textContent = formatPickedDate(p.birthday);
+            profileBirthdayBtnEl.classList.add('has-value');
+        } else {
+            profileBirthdayBtnEl.textContent = 'Seleccionar data';
+            profileBirthdayBtnEl.classList.remove('has-value');
+        }
         profileColorEl.value = p.color || '';
         profileNeuteredEl.checked = !!p.neutered;
         profileChipEl.value = p.chip || '';
@@ -420,10 +428,112 @@
         });
     }
 
+    // === Custom Date Picker ===
+    function showDatePicker(onSelect, opts) {
+        opts = opts || {};
+        var allowFuture = opts.allowFuture || false;
+        var initialDate = opts.initialDate ? new Date(opts.initialDate) : null;
+
+        var overlay = document.getElementById('datePickerOverlay');
+        var grid = document.getElementById('dpGrid');
+        var label = document.getElementById('dpMonthLabel');
+        var prevBtn = document.getElementById('dpPrev');
+        var nextBtn = document.getElementById('dpNext');
+        var cancelBtn = document.getElementById('dpCancel');
+
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        var viewMonth = initialDate ? initialDate.getMonth() : today.getMonth();
+        var viewYear = initialDate ? initialDate.getFullYear() : today.getFullYear();
+
+        overlay.style.display = '';
+
+        function renderMonth() {
+            var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            label.textContent = monthNames[viewMonth] + ' ' + viewYear;
+
+            var firstDay = new Date(viewYear, viewMonth, 1);
+            var lastDay = new Date(viewYear, viewMonth + 1, 0);
+            var startDow = (firstDay.getDay() + 6) % 7;
+
+            grid.innerHTML = '';
+            for (var i = 0; i < startDow; i++) {
+                var empty = document.createElement('button');
+                empty.className = 'dp-day empty';
+                grid.appendChild(empty);
+            }
+            for (var d = 1; d <= lastDay.getDate(); d++) {
+                var btn = document.createElement('button');
+                btn.className = 'dp-day';
+                btn.textContent = d;
+                var thisDate = new Date(viewYear, viewMonth, d);
+                thisDate.setHours(0, 0, 0, 0);
+                if (thisDate.getTime() === today.getTime()) btn.classList.add('today');
+
+                var selectable = allowFuture || thisDate <= today;
+                if (!selectable) btn.classList.add('future');
+
+                if (initialDate) {
+                    var initDay = new Date(initialDate);
+                    initDay.setHours(0, 0, 0, 0);
+                    if (thisDate.getTime() === initDay.getTime()) btn.classList.add('selected');
+                }
+
+                (function (dateObj, canSelect) {
+                    if (canSelect) {
+                        btn.addEventListener('click', function () {
+                            var yyyy = dateObj.getFullYear();
+                            var mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            var dd = String(dateObj.getDate()).padStart(2, '0');
+                            cleanup();
+                            onSelect(yyyy + '-' + mm + '-' + dd);
+                        });
+                    }
+                })(thisDate, selectable);
+
+                grid.appendChild(btn);
+            }
+        }
+
+        function cleanup() {
+            overlay.style.display = 'none';
+            prevBtn.removeEventListener('click', handlePrev);
+            nextBtn.removeEventListener('click', handleNext);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
+        }
+
+        function handlePrev() { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } renderMonth(); }
+        function handleNext() { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } renderMonth(); }
+        function handleCancel() { cleanup(); }
+        function handleOverlay(e) { if (e.target === overlay) cleanup(); }
+
+        prevBtn.addEventListener('click', handlePrev);
+        nextBtn.addEventListener('click', handleNext);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
+
+        renderMonth();
+    }
+
+    function formatPickedDate(dateStr) {
+        var parts = dateStr.split('-');
+        return parts[2] + '/' + parts[1] + '/' + parts[0];
+    }
+
     // Events
     saveSettingsBtn.addEventListener('click', handleSave);
     testNotificationBtn.addEventListener('click', handleTestNotification);
     generateInviteBtn.addEventListener('click', handleGenerateInvite);
     generateShareBtn.addEventListener('click', handleGenerateShare);
     copyShareLinkBtn.addEventListener('click', handleCopyShareLink);
+
+    profileBirthdayBtnEl.addEventListener('click', function () {
+        var initDate = profileBirthdayEl.value || null;
+        showDatePicker(function (dateStr) {
+            profileBirthdayEl.value = dateStr;
+            profileBirthdayBtnEl.textContent = formatPickedDate(dateStr);
+            profileBirthdayBtnEl.classList.add('has-value');
+        }, { initialDate: initDate });
+    });
 })();

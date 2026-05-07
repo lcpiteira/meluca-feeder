@@ -127,7 +127,8 @@
                             <div class="dog-form-row dog-form-half">
                                 <div>
                                     <label class="dog-form-label">Nascimento</label>
-                                    <input type="date" id="newDogBirthday" class="vet-input">
+                                    <button class="date-picker-btn" id="newDogBirthdayBtn">Seleccionar data</button>
+                                    <input type="hidden" id="newDogBirthday">
                                 </div>
                                 <div>
                                     <label class="dog-form-label">Cor</label>
@@ -320,8 +321,18 @@
                             <option value="outro">Outro</option>
                         </select>
                         <input type="text" id="vetDesc" placeholder="Descrição" class="vet-input">
-                        <input type="date" id="vetDate" class="vet-input">
-                        <input type="date" id="vetNextDate" placeholder="Próxima data" class="vet-input">
+                        <div class="vet-dates-row">
+                            <div>
+                                <label class="dog-form-label">Data</label>
+                                <button class="date-picker-btn" id="vetDateBtn">Hoje</button>
+                                <input type="hidden" id="vetDate">
+                            </div>
+                            <div>
+                                <label class="dog-form-label">Próxima data</label>
+                                <button class="date-picker-btn" id="vetNextDateBtn">Seleccionar data</button>
+                                <input type="hidden" id="vetNextDate">
+                            </div>
+                        </div>
                         <button id="vetAddBtn" class="btn btn-primary">Registar</button>
                     </div>
                     <div class="vet-upcoming" id="vetUpcoming"></div>

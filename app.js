@@ -54,6 +54,7 @@
     const newDogNameEl = document.getElementById('newDogName');
     const newDogBreedEl = document.getElementById('newDogBreed');
     const newDogBirthdayEl = document.getElementById('newDogBirthday');
+    const newDogBirthdayBtnEl = document.getElementById('newDogBirthdayBtn');
     const newDogColorEl = document.getElementById('newDogColor');
     const newDogNeuteredEl = document.getElementById('newDogNeutered');
     const newDogChipEl = document.getElementById('newDogChip');
@@ -94,7 +95,9 @@
     const vetTypeEl = document.getElementById('vetType');
     const vetDescEl = document.getElementById('vetDesc');
     const vetDateEl = document.getElementById('vetDate');
+    const vetDateBtnEl = document.getElementById('vetDateBtn');
     const vetNextDateEl = document.getElementById('vetNextDate');
+    const vetNextDateBtnEl = document.getElementById('vetNextDateBtn');
     const vetAddBtnEl = document.getElementById('vetAddBtn');
     const vetUpcomingEl = document.getElementById('vetUpcoming');
     const vetHistoryEl = document.getElementById('vetHistory');
@@ -323,6 +326,8 @@
             newDogNameEl.value = '';
             newDogBreedEl.value = '';
             newDogBirthdayEl.value = '';
+            newDogBirthdayBtnEl.textContent = 'Seleccionar data';
+            newDogBirthdayBtnEl.classList.remove('has-value');
             newDogColorEl.value = '';
             newDogNeuteredEl.checked = false;
             newDogChipEl.value = '';
@@ -516,7 +521,11 @@
     }
 
     // === Custom Date Picker ===
-    function showDatePicker(onSelect) {
+    function showDatePicker(onSelect, opts) {
+        opts = opts || {};
+        var allowFuture = opts.allowFuture || false;
+        var initialDate = opts.initialDate ? new Date(opts.initialDate) : null;
+
         var overlay = document.getElementById('datePickerOverlay');
         var grid = document.getElementById('dpGrid');
         var label = document.getElementById('dpMonthLabel');
@@ -526,8 +535,8 @@
 
         var today = new Date();
         today.setHours(0, 0, 0, 0);
-        var viewMonth = today.getMonth();
-        var viewYear = today.getFullYear();
+        var viewMonth = initialDate ? initialDate.getMonth() : today.getMonth();
+        var viewYear = initialDate ? initialDate.getFullYear() : today.getFullYear();
 
         overlay.style.display = '';
 
@@ -552,10 +561,18 @@
                 var thisDate = new Date(viewYear, viewMonth, d);
                 thisDate.setHours(0, 0, 0, 0);
                 if (thisDate.getTime() === today.getTime()) btn.classList.add('today');
-                if (thisDate > today) btn.classList.add('future');
 
-                (function (dateObj) {
-                    if (dateObj <= today) {
+                var selectable = allowFuture || thisDate <= today;
+                if (!selectable) btn.classList.add('future');
+
+                if (initialDate) {
+                    var initDay = new Date(initialDate);
+                    initDay.setHours(0, 0, 0, 0);
+                    if (thisDate.getTime() === initDay.getTime()) btn.classList.add('selected');
+                }
+
+                (function (dateObj, canSelect) {
+                    if (canSelect) {
                         btn.addEventListener('click', function () {
                             var yyyy = dateObj.getFullYear();
                             var mm = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -564,7 +581,7 @@
                             onSelect(yyyy + '-' + mm + '-' + dd);
                         });
                     }
-                })(thisDate);
+                })(thisDate, selectable);
 
                 grid.appendChild(btn);
             }
@@ -978,6 +995,29 @@
         healthNoteTextEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleHealthNote();
         });
+
+        // Date picker buttons
+        newDogBirthdayBtnEl.addEventListener('click', function () {
+            showDatePicker(function (dateStr) {
+                newDogBirthdayEl.value = dateStr;
+                newDogBirthdayBtnEl.textContent = formatPickedDate(dateStr);
+                newDogBirthdayBtnEl.classList.add('has-value');
+            });
+        });
+        vetDateBtnEl.addEventListener('click', function () {
+            showDatePicker(function (dateStr) {
+                vetDateEl.value = dateStr;
+                vetDateBtnEl.textContent = formatPickedDate(dateStr);
+                vetDateBtnEl.classList.add('has-value');
+            });
+        });
+        vetNextDateBtnEl.addEventListener('click', function () {
+            showDatePicker(function (dateStr) {
+                vetNextDateEl.value = dateStr;
+                vetNextDateBtnEl.textContent = formatPickedDate(dateStr);
+                vetNextDateBtnEl.classList.add('has-value');
+            }, { allowFuture: true });
+        });
         heatStartBtnEl.addEventListener('click', handleHeatStart);
         heatEndBtnEl.addEventListener('click', handleHeatEnd);
         heatStartDateBtnEl.addEventListener('click', function () {
@@ -1013,7 +1053,10 @@
 
         // Init calendar + vet date
         renderCalendar();
-        vetDateEl.value = new Date().toISOString().slice(0, 10);
+        var todayStr = new Date().toISOString().slice(0, 10);
+        vetDateEl.value = todayStr;
+        vetDateBtnEl.textContent = formatPickedDate(todayStr);
+        vetDateBtnEl.classList.add('has-value');
     }
 
     // === Handlers ===
@@ -1147,6 +1190,12 @@
 
         vetDescEl.value = '';
         vetNextDateEl.value = '';
+        vetNextDateBtnEl.textContent = 'Seleccionar data';
+        vetNextDateBtnEl.classList.remove('has-value');
+        // Reset date to today
+        var todayStr = new Date().toISOString().slice(0, 10);
+        vetDateEl.value = todayStr;
+        vetDateBtnEl.textContent = formatPickedDate(todayStr);
         showToast('Registo veterinário adicionado');
     }
 

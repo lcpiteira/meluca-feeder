@@ -1089,6 +1089,15 @@ section h2 {
     margin-bottom: 16px;
 }
 
+.vet-dates-row {
+    display: flex;
+    gap: 10px;
+}
+
+.vet-dates-row > div {
+    flex: 1;
+}
+
 .vet-select,
 .vet-input {
     padding: 10px 14px;

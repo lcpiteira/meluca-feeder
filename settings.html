@@ -97,7 +97,8 @@
                 </div>
                 <div class="setting-group">
                     <label>Data de nascimento:</label>
-                    <input type="date" id="profileBirthday" class="vet-input">
+                    <button class="date-picker-btn" id="profileBirthdayBtn">Seleccionar data</button>
+                    <input type="hidden" id="profileBirthday">
                 </div>
                 <div class="setting-group">
                     <label>Cor:</label>
@@ -228,6 +229,24 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Date Picker Modal -->
+    <div class="modal-overlay" id="datePickerOverlay" style="display: none;">
+        <div class="modal-card date-picker-modal">
+            <div class="dp-header">
+                <button class="btn btn-secondary btn-small" id="dpPrev">◀</button>
+                <span class="dp-month-label" id="dpMonthLabel"></span>
+                <button class="btn btn-secondary btn-small" id="dpNext">▶</button>
+            </div>
+            <div class="dp-weekdays">
+                <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
+            </div>
+            <div class="dp-grid" id="dpGrid"></div>
+            <div class="modal-actions" style="margin-top: 12px;">
+                <button class="btn btn-secondary" id="dpCancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
