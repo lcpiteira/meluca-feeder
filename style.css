@@ -1037,6 +1037,175 @@ section h2 {
     white-space: nowrap;
 }
 
+/* Heat Cycle */
+.heat-status {
+    margin-bottom: 16px;
+}
+
+.heat-status-card {
+    background: var(--primary-glow);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+}
+
+.heat-status-phase {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.heat-status-detail {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.heat-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.heat-form-row label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.heat-timeline {
+    margin: 20px 0;
+}
+
+.heat-phase-bar {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.heat-phase-segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+.heat-phase-segment.bleeding { background: #ef4444; }
+.heat-phase-segment.fertile { background: #f59e0b; }
+.heat-phase-segment.diestrus { background: #6366f1; }
+.heat-phase-segment.anestrus { background: #64748b; }
+
+.heat-phase-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.heat-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.heat-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.heat-calendar {
+    margin: 16px 0;
+}
+
+.heat-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-top: 8px;
+}
+
+.heat-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.heat-cal-header span {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.heat-cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    border-radius: 6px;
+    color: var(--text);
+}
+
+.heat-cal-day.empty { visibility: hidden; }
+.heat-cal-day.bleeding { background: rgba(239, 68, 68, 0.25); color: #ef4444; font-weight: 600; }
+.heat-cal-day.fertile { background: rgba(245, 158, 11, 0.25); color: #f59e0b; font-weight: 600; }
+.heat-cal-day.diestrus { background: rgba(99, 102, 241, 0.15); }
+.heat-cal-day.today { border: 2px solid var(--primary); font-weight: 700; }
+
+.heat-cal-weekday {
+    font-size: 0.6rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 4px 0;
+}
+
+.heat-history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.heat-history-item:last-child {
+    border-bottom: none;
+}
+
+.heat-history-dates {
+    color: var(--text-light);
+}
+
+.heat-history-duration {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.heat-next-prediction {
+    background: var(--warning-light);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-top: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.heat-next-prediction strong {
+    color: var(--warning);
+}
+
 /* Health Notes */
 .health-note-form {
     display: flex;
