@@ -156,25 +156,30 @@
             var currentRole = (members[currentUser.uid] && members[currentUser.uid].role) || '';
             var isOwner = currentRole === 'owner';
 
-            var html = '<h3 style="margin-top: 16px; font-size: 0.85rem; color: var(--text-light);">Membros actuais</h3>';
+            membersListEl.innerHTML = '<h3 style="margin-top: 16px; font-size: 0.85rem; color: var(--text-light);">Membros actuais</h3>';
+
             Object.keys(members).forEach(function (uid) {
                 var m = members[uid];
                 var roleLabel = m.role === 'owner' ? '👑 Owner' : '👤 Membro';
-                html += '<div class="member-row"><div class="member-info"><span>' + escapeHtml(m.name || uid) + '</span><span class="vet-type">' + roleLabel + '</span></div>';
-                if (isOwner && uid !== currentUser.uid) {
-                    html += '<button class="btn-remove-member" data-uid="' + uid + '" data-name="' + escapeHtml(m.name || uid) + '">Remover</button>';
-                }
-                html += '</div>';
-            });
-            membersListEl.innerHTML = html;
 
-            // Bind remove buttons
-            membersListEl.querySelectorAll('.btn-remove-member').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var uid = btn.getAttribute('data-uid');
-                    var name = btn.getAttribute('data-name');
-                    handleRemoveMember(uid, name);
-                });
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)';
+
+                var info = document.createElement('div');
+                info.innerHTML = '<strong style="font-size:0.9rem">' + escapeHtml(m.name || uid) + '</strong><br><span style="font-size:0.75rem;color:var(--text-muted)">' + roleLabel + '</span>';
+                row.appendChild(info);
+
+                if (isOwner && uid !== currentUser.uid) {
+                    var btn = document.createElement('button');
+                    btn.textContent = 'Remover';
+                    btn.style.cssText = 'background:none;border:1px solid var(--danger);color:var(--danger);font-size:0.75rem;padding:4px 10px;border-radius:6px;cursor:pointer';
+                    btn.addEventListener('click', function () {
+                        handleRemoveMember(uid, m.name || uid);
+                    });
+                    row.appendChild(btn);
+                }
+
+                membersListEl.appendChild(row);
             });
         });
     }
