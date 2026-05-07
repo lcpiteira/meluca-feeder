@@ -72,6 +72,10 @@
                 </div>
                 <div class="header-top">
                     <button class="btn-back" id="backToDogs" aria-label="Voltar aos cães">← </button>
+                    <div class="header-dog-avatar" id="headerDogAvatar">
+                        <span class="header-avatar-icon" id="headerAvatarIcon">🐕</span>
+                        <img class="header-avatar-photo" id="headerAvatarPhoto" style="display:none;" alt="">
+                    </div>
                     <div class="header-dog-info">
                         <h1 id="appDogName">MelucaFeeder</h1>
                         <p class="header-dog-subtitle" id="appDogSubtitle"></p>
@@ -374,6 +378,20 @@
             <!-- Step 0: Dog profile -->
             <div class="setup-step active" id="setupStepProfile">
                 <h3>Sobre o teu cão</h3>
+                <div class="avatar-picker" id="setupAvatarPicker">
+                    <div class="avatar-preview" id="setupAvatarPreview">
+                        <span class="avatar-preview-icon" id="setupAvatarIcon">🐕</span>
+                        <img class="avatar-preview-photo" id="setupAvatarPhoto" style="display:none;" alt="">
+                        <div class="avatar-preview-edit">✏️</div>
+                    </div>
+                    <input type="hidden" id="setupAvatarType" value="icon">
+                    <input type="hidden" id="setupAvatarValue" value="🐕">
+                    <input type="file" id="setupAvatarFile" accept="image/*" style="display:none;">
+                    <div class="avatar-options" id="setupAvatarOptions" style="display:none;">
+                        <div class="avatar-icons-grid" id="setupAvatarGrid"></div>
+                        <button class="btn btn-secondary avatar-photo-btn" id="setupAvatarPhotoBtn">📷 Carregar foto</button>
+                    </div>
+                </div>
                 <div class="dog-form-grid">
                     <div class="dog-form-row">
                         <button class="custom-dropdown-btn" id="setupBreedBtn">Raça</button>

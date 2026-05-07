@@ -223,6 +223,22 @@ body {
 
 .dog-card-avatar {
     font-size: 2rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--bg-card);
+}
+
+.dog-card-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
 }
 
 .dog-card-name {
@@ -2834,6 +2850,134 @@ footer {
         margin-bottom: 10px;
         padding: 14px;
     }
+}
+
+/* ========== Avatar Picker ========== */
+.avatar-picker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.avatar-preview {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.avatar-preview:hover,
+.avatar-preview:active {
+    border-color: var(--primary);
+}
+
+.avatar-preview-icon {
+    font-size: 2.2rem;
+    line-height: 1;
+}
+
+.avatar-preview-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-preview-edit {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    border: 2px solid var(--bg);
+}
+
+.avatar-options {
+    width: 100%;
+    max-width: 320px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    animation: tour-tooltip-in 0.25s ease;
+}
+
+.avatar-icons-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.avatar-icon-option {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, transform 0.15s;
+}
+
+.avatar-icon-option:hover,
+.avatar-icon-option:active {
+    border-color: var(--primary);
+    transform: scale(1.08);
+}
+
+.avatar-icon-option.selected {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+.avatar-photo-btn {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 8px;
+}
+
+/* Header Avatar */
+.header-dog-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+}
+
+.header-avatar-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.header-avatar-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* ========== App Tour ========== */

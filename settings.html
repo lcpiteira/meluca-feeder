@@ -31,6 +31,23 @@
             <div class="settings-section-body">
             <div class="settings-form">
                 <div class="setting-group">
+                    <label>Avatar:</label>
+                    <div class="avatar-picker" id="profileAvatarPicker">
+                        <div class="avatar-preview" id="profileAvatarPreview">
+                            <span class="avatar-preview-icon" id="profileAvatarIcon">🐕</span>
+                            <img class="avatar-preview-photo" id="profileAvatarPhoto" style="display:none;" alt="">
+                            <div class="avatar-preview-edit">✏️</div>
+                        </div>
+                        <input type="hidden" id="profileAvatarType" value="icon">
+                        <input type="hidden" id="profileAvatarValue" value="🐕">
+                        <input type="file" id="profileAvatarFile" accept="image/*" style="display:none;">
+                        <div class="avatar-options" id="profileAvatarOptions" style="display:none;">
+                            <div class="avatar-icons-grid" id="profileAvatarGrid"></div>
+                            <button class="btn btn-secondary avatar-photo-btn" id="profileAvatarPhotoBtn">📷 Carregar foto</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-group">
                     <label>Nome:</label>
                     <input type="text" id="profileName" class="vet-input">
                 </div>

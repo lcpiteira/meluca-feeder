@@ -428,6 +428,10 @@
         var homemadeStock = document.getElementById('setupHomemadeStock');
         if (homemadeStock) homemadeStock.value = '0';
 
+        // Reset and init avatar picker
+        setAvatarPreview('setup', { type: 'icon', value: '🐕' });
+        initAvatarPicker('setup');
+
         // Get dog name for subtitle
         db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
             var sub = document.getElementById('setupSubtitle');
@@ -473,7 +477,8 @@
                 birthday: document.getElementById('setupBirthday').value || '',
                 color: document.getElementById('setupColor').value.trim(),
                 neutered: document.getElementById('setupNeutered').checked,
-                chip: document.getElementById('setupChip').value.trim()
+                chip: document.getElementById('setupChip').value.trim(),
+                avatar: getAvatarFromPicker('setup')
             };
         }
 
@@ -502,6 +507,7 @@
                 if (lbl) lbl.classList.add('checked');
             }
             if (p.chip) document.getElementById('setupChip').value = p.chip;
+            if (p.avatar) setAvatarPreview('setup', p.avatar);
         }
 
         function saveOnboardingState() {
@@ -873,6 +879,9 @@
             var subtitleEl = document.getElementById('appDogSubtitle');
             if (subtitleEl) subtitleEl.textContent = parts.join(' · ');
 
+            // Update header avatar
+            updateHeaderAvatar(p.avatar);
+
             // Hide heat tab for male dogs
             var heatTabBtn = document.querySelector('.tab[data-tab="heat"]');
             var heatTabContent = document.getElementById('tab-heat');
@@ -936,7 +945,7 @@
                 var card = document.createElement('div');
                 card.className = 'dog-card';
                 card.innerHTML = '<div class="dog-card-info">' +
-                    '<span class="dog-card-avatar">🐕</span>' +
+                    '<span class="dog-card-avatar">' + renderDogAvatar(p.avatar) + '</span>' +
                     '<div><div class="dog-card-name">' + escapeHtml(dog.name || 'Cão') + '</div>' +
                     subtitleStr +
                     '<div class="dog-card-role">' + roleLabel + '</div></div>' +
@@ -1651,6 +1660,151 @@
             offline: '○ Apenas local'
         };
         syncStatusEl.textContent = labels[status] || '';
+    }
+
+    // === Dog Avatar ===
+    var DOG_ICONS = ['🐕', '🐶', '🐩', '🦮', '🐕‍🦺', '🐾', '🐺', '🦊', '🐻', '🐼', '🦁', '🐯', '🐗', '🐴', '🦄', '🐰', '🐱', '🐈'];
+
+    function initAvatarPicker(prefix) {
+        var preview = document.getElementById(prefix + 'AvatarPreview');
+        var iconEl = document.getElementById(prefix + 'AvatarIcon');
+        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        var fileEl = document.getElementById(prefix + 'AvatarFile');
+        var optionsEl = document.getElementById(prefix + 'AvatarOptions');
+        var gridEl = document.getElementById(prefix + 'AvatarGrid');
+        var photoBtnEl = document.getElementById(prefix + 'AvatarPhotoBtn');
+        if (!preview) return;
+
+        // Build icon grid
+        gridEl.innerHTML = DOG_ICONS.map(function (icon) {
+            var sel = icon === valueEl.value ? ' selected' : '';
+            return '<button type="button" class="avatar-icon-option' + sel + '" data-icon="' + icon + '">' + icon + '</button>';
+        }).join('');
+
+        // Toggle options panel
+        preview.addEventListener('click', function () {
+            optionsEl.style.display = optionsEl.style.display === 'none' ? '' : 'none';
+        });
+
+        // Select icon
+        gridEl.addEventListener('click', function (e) {
+            var btn = e.target.closest('.avatar-icon-option');
+            if (!btn) return;
+            var icon = btn.getAttribute('data-icon');
+            typeEl.value = 'icon';
+            valueEl.value = icon;
+            iconEl.textContent = icon;
+            iconEl.style.display = '';
+            photoEl.style.display = 'none';
+            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
+            btn.classList.add('selected');
+            optionsEl.style.display = 'none';
+        });
+
+        // Photo button
+        photoBtnEl.addEventListener('click', function () {
+            fileEl.click();
+        });
+
+        // Photo file selected
+        fileEl.addEventListener('change', function () {
+            var file = fileEl.files[0];
+            if (!file) return;
+            compressPhoto(file, function (dataUrl) {
+                typeEl.value = 'photo';
+                valueEl.value = dataUrl;
+                photoEl.src = dataUrl;
+                photoEl.style.display = '';
+                iconEl.style.display = 'none';
+                optionsEl.style.display = 'none';
+                gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
+            });
+            fileEl.value = '';
+        });
+    }
+
+    function compressPhoto(file, callback) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            var img = new Image();
+            img.onload = function () {
+                var canvas = document.createElement('canvas');
+                var size = 64;
+                canvas.width = size;
+                canvas.height = size;
+                var ctx = canvas.getContext('2d');
+                // Crop to square from center
+                var sx = 0, sy = 0, sw = img.width, sh = img.height;
+                if (sw > sh) { sx = (sw - sh) / 2; sw = sh; }
+                else { sy = (sh - sw) / 2; sh = sw; }
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function setAvatarPreview(prefix, avatar) {
+        var iconEl = document.getElementById(prefix + 'AvatarIcon');
+        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        if (!iconEl) return;
+        var a = avatar || { type: 'icon', value: '🐕' };
+        typeEl.value = a.type;
+        valueEl.value = a.value;
+        if (a.type === 'photo') {
+            photoEl.src = a.value;
+            photoEl.style.display = '';
+            iconEl.style.display = 'none';
+        } else {
+            iconEl.textContent = a.value || '🐕';
+            iconEl.style.display = '';
+            photoEl.style.display = 'none';
+        }
+        // Update grid selection
+        var gridEl = document.getElementById(prefix + 'AvatarGrid');
+        if (gridEl) {
+            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) {
+                if (a.type === 'icon' && b.getAttribute('data-icon') === a.value) b.classList.add('selected');
+                else b.classList.remove('selected');
+            });
+        }
+    }
+
+    function getAvatarFromPicker(prefix) {
+        var typeEl = document.getElementById(prefix + 'AvatarType');
+        var valueEl = document.getElementById(prefix + 'AvatarValue');
+        if (!typeEl) return { type: 'icon', value: '🐕' };
+        return { type: typeEl.value, value: valueEl.value };
+    }
+
+    function renderDogAvatar(avatar) {
+        var a = avatar || { type: 'icon', value: '🐕' };
+        if (a.type === 'photo') {
+            return '<img src="' + a.value + '" alt="">';
+        }
+        return a.value || '🐕';
+    }
+
+    function updateHeaderAvatar(avatar) {
+        var iconEl = document.getElementById('headerAvatarIcon');
+        var photoEl = document.getElementById('headerAvatarPhoto');
+        if (!iconEl) return;
+        var a = avatar || { type: 'icon', value: '🐕' };
+        if (a.type === 'photo') {
+            photoEl.src = a.value;
+            photoEl.style.display = '';
+            iconEl.style.display = 'none';
+        } else {
+            iconEl.textContent = a.value || '🐕';
+            iconEl.style.display = '';
+            photoEl.style.display = 'none';
+        }
     }
 
     // === App Tour ===
