@@ -248,6 +248,91 @@ body {
     flex: 1;
 }
 
+/* Dog form */
+.dog-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dog-form-row {
+    display: flex;
+    flex-direction: column;
+}
+
+.dog-form-row .vet-input,
+.dog-form-row .vet-select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dog-form-half {
+    flex-direction: row;
+    gap: 10px;
+}
+
+.dog-form-half > div {
+    flex: 1;
+}
+
+.dog-form-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+
+.dog-form-radio-group {
+    display: flex;
+    gap: 16px;
+}
+
+.dog-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    cursor: pointer;
+}
+
+.dog-radio-label input[type="radio"] {
+    accent-color: var(--primary);
+}
+
+.dog-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-light);
+    cursor: pointer;
+}
+
+.dog-checkbox-label input[type="checkbox"] {
+    accent-color: var(--primary);
+}
+
+/* Dog card details */
+.dog-card-details {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Header dog subtitle */
+.header-dog-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.header-dog-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+    font-weight: 400;
+}
+
 /* Back button */
 .btn-back {
     background: none;

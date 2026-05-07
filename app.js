@@ -52,6 +52,11 @@
     const appDogNameEl = document.getElementById('appDogName');
     const backToDogsBtn = document.getElementById('backToDogs');
     const newDogNameEl = document.getElementById('newDogName');
+    const newDogBreedEl = document.getElementById('newDogBreed');
+    const newDogBirthdayEl = document.getElementById('newDogBirthday');
+    const newDogColorEl = document.getElementById('newDogColor');
+    const newDogNeuteredEl = document.getElementById('newDogNeutered');
+    const newDogChipEl = document.getElementById('newDogChip');
     const createDogBtnEl = document.getElementById('createDogBtn');
     const inviteCodeEl = document.getElementById('inviteCode');
     const joinDogBtnEl = document.getElementById('joinDogBtn');
@@ -294,9 +299,20 @@
             return;
         }
 
+        var sexRadio = document.querySelector('input[name="newDogSex"]:checked');
+        var profile = {
+            breed: newDogBreedEl.value || '',
+            sex: sexRadio ? sexRadio.value : '',
+            birthday: newDogBirthdayEl.value || '',
+            color: newDogColorEl.value.trim(),
+            neutered: newDogNeuteredEl.checked,
+            chip: newDogChipEl.value.trim()
+        };
+
         var dogId = db.ref('dogs').push().key;
         var updates = {};
         updates['dogs/' + dogId + '/name'] = name;
+        updates['dogs/' + dogId + '/profile'] = profile;
         updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
         updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
         updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
@@ -305,8 +321,14 @@
 
         db.ref().update(updates).then(function () {
             newDogNameEl.value = '';
+            newDogBreedEl.value = '';
+            newDogBirthdayEl.value = '';
+            newDogColorEl.value = '';
+            newDogNeuteredEl.checked = false;
+            newDogChipEl.value = '';
+            var checked = document.querySelector('input[name="newDogSex"]:checked');
+            if (checked) checked.checked = false;
             showToast(name + ' criado!');
-            // Dogs screen will refresh via the on('value') listener
         });
     }
 
@@ -353,8 +375,16 @@
         firstLoad = true;
 
         // Set dog name in header
-        db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
-            appDogNameEl.textContent = snap.val() || 'MelucaFeeder';
+        db.ref('dogs/' + dogId).once('value', function (snap) {
+            var dog = snap.val() || {};
+            appDogNameEl.textContent = dog.name || 'MelucaFeeder';
+            var p = dog.profile || {};
+            var parts = [];
+            if (p.breed) parts.push(p.breed);
+            if (p.sex) parts.push(p.sex === 'M' ? '♂ Macho' : '♀ Fêmea');
+            if (p.birthday) parts.push(calcAge(p.birthday));
+            var subtitleEl = document.getElementById('appDogSubtitle');
+            if (subtitleEl) subtitleEl.textContent = parts.join(' · ');
         });
 
         showApp();
@@ -386,11 +416,22 @@
                 var role = (dog.members && dog.members[currentUser.uid]) ? dog.members[currentUser.uid].role : '';
                 var roleLabel = role === 'owner' ? 'Dono' : 'Membro';
 
+                var p = dog.profile || {};
+                var subtitle = [];
+                if (p.breed) subtitle.push(p.breed);
+                if (p.sex) subtitle.push(p.sex === 'M' ? '♂' : '♀');
+                if (p.birthday) {
+                    var age = calcAge(p.birthday);
+                    subtitle.push(age);
+                }
+                var subtitleStr = subtitle.length > 0 ? '<div class="dog-card-details">' + escapeHtml(subtitle.join(' · ')) + '</div>' : '';
+
                 var card = document.createElement('div');
                 card.className = 'dog-card';
                 card.innerHTML = '<div class="dog-card-info">' +
                     '<span class="dog-card-avatar">🐕</span>' +
                     '<div><div class="dog-card-name">' + escapeHtml(dog.name || 'Cão') + '</div>' +
+                    subtitleStr +
                     '<div class="dog-card-role">' + roleLabel + '</div></div>' +
                     '</div><div class="dog-card-actions">' +
                     '<button class="btn-delete-dog" title="Remover cão">🗑️</button>' +
@@ -1680,6 +1721,21 @@
         var div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
+    }
+
+    function calcAge(birthday) {
+        var b = new Date(birthday);
+        var now = new Date();
+        var years = now.getFullYear() - b.getFullYear();
+        var months = now.getMonth() - b.getMonth();
+        if (months < 0 || (months === 0 && now.getDate() < b.getDate())) {
+            years--;
+            months += 12;
+        }
+        if (now.getDate() < b.getDate()) months--;
+        if (months < 0) months = 0;
+        if (years >= 1) return years + (years === 1 ? ' ano' : ' anos');
+        return months + (months === 1 ? ' mês' : ' meses');
     }
 
     function showToast(message) {

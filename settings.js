@@ -27,6 +27,7 @@
     }
 
     const loginSection = document.getElementById('loginSection');
+    const profilePanel = document.getElementById('profilePanel');
     const alertPanel = document.getElementById('alertPanel');
     const telegramPanel = document.getElementById('telegramPanel');
     const recipePanel = document.getElementById('recipePanel');
@@ -40,6 +41,13 @@
     const inviteResultEl = document.getElementById('inviteResult');
     const membersListEl = document.getElementById('membersList');
     const toastEl = document.getElementById('toast');
+
+    const profileNameEl = document.getElementById('profileName');
+    const profileBreedEl = document.getElementById('profileBreed');
+    const profileBirthdayEl = document.getElementById('profileBirthday');
+    const profileColorEl = document.getElementById('profileColor');
+    const profileNeuteredEl = document.getElementById('profileNeutered');
+    const profileChipEl = document.getElementById('profileChip');
 
     const alertThresholdEl = document.getElementById('alertThreshold');
     const telegramTokenEl = document.getElementById('telegramToken');
@@ -70,6 +78,7 @@
 
     function showSettings() {
         loginSection.style.display = 'none';
+        profilePanel.style.display = '';
         alertPanel.style.display = '';
         telegramPanel.style.display = '';
         recipePanel.style.display = '';
@@ -78,9 +87,11 @@
         sharePanel.style.display = '';
         actionsPanel.style.display = '';
 
-        // Load dog name
-        db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
-            dogNameSubtitle.textContent = snap.val() || 'Configurações do cão';
+        // Load dog name + profile
+        db.ref('dogs/' + currentDogId).once('value', function (snap) {
+            var dog = snap.val() || {};
+            dogNameSubtitle.textContent = dog.name || 'Configurações do cão';
+            populateProfile(dog.name, dog.profile || {});
         });
 
         // Load settings
@@ -108,7 +119,32 @@
         targetWeightEl.value = s.targetWeight || '';
     }
 
+    function populateProfile(name, p) {
+        profileNameEl.value = name || '';
+        profileBreedEl.value = p.breed || '';
+        profileBirthdayEl.value = p.birthday || '';
+        profileColorEl.value = p.color || '';
+        profileNeuteredEl.checked = !!p.neutered;
+        profileChipEl.value = p.chip || '';
+        var sexRadios = document.querySelectorAll('input[name="profileSex"]');
+        sexRadios.forEach(function (r) { r.checked = (r.value === p.sex); });
+    }
+
     function handleSave() {
+        // Save profile
+        var profileSexRadio = document.querySelector('input[name="profileSex"]:checked');
+        var profileUpdates = {};
+        profileUpdates['dogs/' + currentDogId + '/name'] = profileNameEl.value.trim() || 'Cão';
+        profileUpdates['dogs/' + currentDogId + '/profile'] = {
+            breed: profileBreedEl.value || '',
+            sex: profileSexRadio ? profileSexRadio.value : '',
+            birthday: profileBirthdayEl.value || '',
+            color: profileColorEl.value.trim(),
+            neutered: profileNeuteredEl.checked,
+            chip: profileChipEl.value.trim()
+        };
+
+        // Save settings
         var settings = {
             alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
             telegramToken: telegramTokenEl.value.trim(),
@@ -123,10 +159,13 @@
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
+        profileUpdates['dogs/' + currentDogId + '/settings'] = settings;
+
         if (db && currentDogId) {
-            db.ref('dogs/' + currentDogId + '/settings').set(settings);
+            db.ref().update(profileUpdates);
         }
 
+        dogNameSubtitle.textContent = profileNameEl.value.trim() || 'Cão';
         showToast('Configurações guardadas');
     }
 
