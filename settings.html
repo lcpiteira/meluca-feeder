@@ -11,35 +11,18 @@
     <div class="app">
         <header>
             <h1>⚙️ Configurações</h1>
-            <p class="subtitle">Acesso restrito</p>
+            <p class="subtitle" id="dogNameSubtitle">Carregando...</p>
         </header>
 
-        <!-- Login -->
+        <!-- Not authenticated -->
         <section class="login-section" id="loginSection">
-            <div class="login-form">
-                <div class="setting-group">
-                    <label>Utilizador:</label>
-                    <input type="text" id="loginUser" placeholder="utilizador" autocomplete="off">
-                </div>
-                <div class="setting-group">
-                    <label>Password:</label>
-                    <input type="password" id="loginPass" placeholder="password">
-                </div>
-                <button id="loginBtn" class="btn btn-primary">Entrar</button>
-                <p class="login-error" id="loginError"></p>
+            <p style="text-align: center; color: var(--text-muted);">Tens de estar autenticado para aceder às configurações.</p>
+            <div style="text-align: center; margin-top: 16px;">
+                <a href="index.html" class="btn btn-primary">← Voltar à app</a>
             </div>
         </section>
 
-        <!-- Settings (hidden until authenticated) -->
-        <section class="settings-section" id="settingsPanel" style="display: none;">
-            <h2>Persistência (Firebase)</h2>
-            <div class="settings-form">
-                <p class="settings-help">
-                    A persistência usa Firebase Realtime Database. A configuração está directamente no código (app.js).
-                </p>
-            </div>
-        </section>
-
+        <!-- Settings (shown when authenticated) -->
         <section class="settings-section" id="alertPanel" style="display: none;">
             <h2>Alertas</h2>
             <div class="settings-form">
@@ -107,6 +90,18 @@
             </div>
         </section>
 
+        <section class="settings-section" id="invitePanel" style="display: none;">
+            <h2>Convidar Membros</h2>
+            <div class="settings-form">
+                <p class="settings-help">Gera um código de convite para outros users se juntarem à gestão deste cão.</p>
+                <div class="setting-group">
+                    <button id="generateInvite" class="btn btn-secondary">Gerar Código</button>
+                    <span id="inviteResult" class="invite-code"></span>
+                </div>
+                <div id="membersList"></div>
+            </div>
+        </section>
+
         <section id="actionsPanel" style="display: none;">
             <div class="setting-group">
                 <button id="saveSettings" class="btn btn-primary">Guardar Configurações</button>
@@ -118,6 +113,7 @@
     <div class="toast" id="toast"></div>
 
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <script src="settings.js"></script>
 </body>

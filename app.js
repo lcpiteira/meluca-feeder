@@ -16,14 +16,40 @@
     const SETTINGS_KEY = 'melucafeeder_settings';
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
+    const MAX_AUTO_DEDUCTIONS = 4;
 
+    // === State ===
     let state = { stock: 0, lastProcessed: 0 };
-    let settings = loadSettings();
+    let settings = loadLocalSettings();
     let history = [];
-    let db = null;
-    let firstLoad = true;
+    let weightData = [];
+    let vetData = [];
+    let healthNotes = [];
+    let calendarMonth = new Date().getMonth();
+    let calendarYear = new Date().getFullYear();
 
-    // === DOM Elements ===
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let currentDogId = null;
+    let userDogs = {};
+    let firstLoad = true;
+    let listeners = []; // Firebase listener refs for cleanup
+
+    // === DOM: Auth ===
+    const loginScreenEl = document.getElementById('loginScreen');
+    const onboardingScreenEl = document.getElementById('onboardingScreen');
+    const appMainEl = document.getElementById('appMain');
+    const googleLoginBtn = document.getElementById('googleLogin');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userNameEl = document.getElementById('userName');
+    const dogSelectorEl = document.getElementById('dogSelector');
+    const newDogNameEl = document.getElementById('newDogName');
+    const createDogBtnEl = document.getElementById('createDogBtn');
+    const inviteCodeEl = document.getElementById('inviteCode');
+    const joinDogBtnEl = document.getElementById('joinDogBtn');
+
+    // === DOM: App ===
     const stockCountEl = document.getElementById('stockCount');
     const stockStatusEl = document.getElementById('stockStatus');
     const nextMorningEl = document.getElementById('nextMorning');
@@ -68,131 +94,375 @@
     const calMonthEl = document.getElementById('calMonth');
     const calendarGridEl = document.getElementById('calendarGrid');
 
-    let weightData = [];
-    let vetData = [];
-    let healthNotes = [];
-    let calendarMonth = new Date().getMonth();
-    let calendarYear = new Date().getFullYear();
+    // === Firebase Init ===
+    function initFirebase() {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        db = firebase.database();
+        auth = firebase.auth();
 
-    // === Initialization ===
-    function init() {
-        render();
-        bindEvents();
-        scheduleNextCheck();
-        initFirebase();
+        // Auth state listener
+        auth.onAuthStateChanged(function (user) {
+            if (user) {
+                currentUser = user;
+                onUserLoggedIn(user);
+            } else {
+                currentUser = null;
+                showLogin();
+            }
+        });
     }
 
-    function initFirebase() {
-        if (FIREBASE_CONFIG.apiKey === 'PLACEHOLDER') {
-            updateSyncStatus('offline');
+    // === Auth Functions ===
+    function handleGoogleLogin() {
+        var provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(function (err) {
+            if (err.code === 'auth/popup-blocked') {
+                // Fallback to redirect
+                auth.signInWithRedirect(provider);
+            } else {
+                console.error('Login error:', err);
+                showToast('Erro no login: ' + err.message);
+            }
+        });
+    }
+
+    function handleLogout() {
+        detachListeners();
+        auth.signOut();
+    }
+
+    function showLogin() {
+        loginScreenEl.style.display = '';
+        onboardingScreenEl.style.display = 'none';
+        appMainEl.style.display = 'none';
+    }
+
+    function showOnboarding() {
+        loginScreenEl.style.display = 'none';
+        onboardingScreenEl.style.display = '';
+        appMainEl.style.display = 'none';
+    }
+
+    function showApp() {
+        loginScreenEl.style.display = 'none';
+        onboardingScreenEl.style.display = 'none';
+        appMainEl.style.display = '';
+    }
+
+    function onUserLoggedIn(user) {
+        userNameEl.textContent = user.displayName || user.email;
+
+        // Ensure user profile exists
+        db.ref('users/' + user.uid).once('value', function (snap) {
+            if (!snap.exists()) {
+                db.ref('users/' + user.uid).set({
+                    name: user.displayName || '',
+                    email: user.email || '',
+                    dogs: {}
+                });
+            }
+        });
+
+        // Load user's dogs
+        db.ref('users/' + user.uid + '/dogs').on('value', function (snap) {
+            userDogs = snap.val() || {};
+            var dogIds = Object.keys(userDogs);
+
+            if (dogIds.length === 0) {
+                // Check if there's legacy data to migrate
+                checkAndMigrateLegacyData(user);
+            } else {
+                // Use saved preference or first dog
+                var savedDog = localStorage.getItem('melucafeeder_currentDog');
+                if (savedDog && userDogs[savedDog]) {
+                    selectDog(savedDog);
+                } else {
+                    selectDog(dogIds[0]);
+                }
+            }
+        });
+    }
+
+    // === Migration: Legacy data → Dog structure ===
+    function checkAndMigrateLegacyData(user) {
+        db.ref('state').once('value', function (snap) {
+            if (snap.exists()) {
+                // Legacy data found — migrate to a new dog
+                migrateToNewDog(user, snap.val());
+            } else {
+                showOnboarding();
+            }
+        });
+    }
+
+    function migrateToNewDog(user, legacyState) {
+        var dogId = db.ref('dogs').push().key;
+        var updates = {};
+
+        // Create dog
+        updates['dogs/' + dogId + '/name'] = 'Meluca';
+        updates['dogs/' + dogId + '/createdBy'] = user.uid;
+        updates['dogs/' + dogId + '/members/' + user.uid] = { role: 'owner', name: user.displayName || user.email };
+        updates['dogs/' + dogId + '/state'] = legacyState;
+
+        // Link user to dog
+        updates['users/' + user.uid + '/dogs/' + dogId] = true;
+
+        db.ref().update(updates).then(function () {
+            // Now migrate history, weight, vet, healthNotes, settings
+            return Promise.all([
+                migrateNode('history', dogId),
+                migrateNode('weight', dogId),
+                migrateNode('vet', dogId),
+                migrateNode('healthNotes', dogId),
+                migrateNode('settings', dogId)
+            ]);
+        }).then(function () {
+            // Remove legacy root nodes
+            return db.ref().update({
+                'state': null,
+                'history': null,
+                'weight': null,
+                'vet': null,
+                'healthNotes': null,
+                'settings': null
+            });
+        }).then(function () {
+            showToast('Dados migrados com sucesso!');
+            selectDog(dogId);
+        }).catch(function (err) {
+            console.error('Migration error:', err);
+            showToast('Erro na migração');
+            showOnboarding();
+        });
+    }
+
+    function migrateNode(nodeName, dogId) {
+        return db.ref(nodeName).once('value').then(function (snap) {
+            if (snap.exists()) {
+                return db.ref('dogs/' + dogId + '/' + nodeName).set(snap.val());
+            }
+        });
+    }
+
+    // === Dog Management ===
+    function handleCreateDog() {
+        var name = newDogNameEl.value.trim();
+        if (!name) {
+            showToast('Introduz o nome do cão');
             return;
         }
 
-        try {
-            firebase.initializeApp(FIREBASE_CONFIG);
-            db = firebase.database();
-            updateSyncStatus('syncing');
+        var dogId = db.ref('dogs').push().key;
+        var updates = {};
+        updates['dogs/' + dogId + '/name'] = name;
+        updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
+        updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
+        updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
+        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
+        updates['users/' + currentUser.uid + '/dogs/' + dogId] = true;
 
-            // Listen for state changes in real-time
-            db.ref('state').on('value', function (snapshot) {
-                const cloudState = snapshot.val();
-                if (cloudState) {
-                    // Always accept Firebase as source of truth
-                    // Only update local state if Firebase has newer data or this is first load
-                    var cloudProcessed = cloudState.lastProcessed || 0;
-                    if (cloudProcessed >= state.lastProcessed || firstLoad) {
-                        state.stock = cloudState.stock || 0;
-                        state.lastProcessed = cloudProcessed;
-                    }
+        db.ref().update(updates).then(function () {
+            newDogNameEl.value = '';
+            showToast(name + ' criado!');
+            selectDog(dogId);
+        });
+    }
 
-                    // Only process deductions on first load
-                    if (firstLoad) {
-                        firstLoad = false;
-                        processAutoDeductions();
-                    }
-
-                    render();
-                    updateSyncStatus('synced');
-                } else {
-                    firstLoad = false;
-                    updateSyncStatus('synced');
-                }
-            });
-
-            // Listen for history changes
-            db.ref('history').orderByChild('date').limitToLast(30).on('value', function (snapshot) {
-                const data = snapshot.val();
-                if (data) {
-                    history = Object.values(data).sort(function (a, b) {
-                        return new Date(b.date) - new Date(a.date);
-                    });
-                    renderHistory();
-                }
-            });
-
-            // Listen for settings changes
-            loadSettingsFromFirebase();
-
-            // Listen for weight data
-            db.ref('weight').orderByChild('date').on('value', function (snapshot) {
-                const data = snapshot.val();
-                if (data) {
-                    weightData = Object.values(data).sort(function (a, b) {
-                        return new Date(a.date) - new Date(b.date);
-                    });
-                } else {
-                    weightData = [];
-                }
-                renderWeight();
-                checkWeightReminder();
-            });
-
-            // Listen for vet records
-            db.ref('vet').on('value', function (snapshot) {
-                const data = snapshot.val();
-                vetData = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
-                vetData.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
-                renderVet();
-                checkVetReminders();
-            });
-
-            // Listen for health notes
-            db.ref('healthNotes').on('value', function (snapshot) {
-                const data = snapshot.val();
-                healthNotes = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
-                healthNotes.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
-                renderHealthNotes();
-            });
-        } catch (e) {
-            console.error('Firebase init error:', e);
-            updateSyncStatus('error');
+    function handleJoinDog() {
+        var code = inviteCodeEl.value.trim().toUpperCase();
+        if (!code || code.length < 4) {
+            showToast('Código inválido');
+            return;
         }
+
+        db.ref('invites/' + code).once('value', function (snap) {
+            var invite = snap.val();
+            if (!invite) {
+                showToast('Código não encontrado');
+                return;
+            }
+            if (invite.expiresAt && invite.expiresAt < Date.now()) {
+                showToast('Código expirado');
+                return;
+            }
+
+            var dogId = invite.dogId;
+            var updates = {};
+            updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'member', name: currentUser.displayName || currentUser.email };
+            updates['users/' + currentUser.uid + '/dogs/' + dogId] = true;
+            updates['invites/' + code] = null; // Remove used invite
+
+            db.ref().update(updates).then(function () {
+                inviteCodeEl.value = '';
+                showToast('Juntaste-te com sucesso!');
+                selectDog(dogId);
+            });
+        });
     }
 
-    // === Settings ===
-    function loadSettings() {
-        try {
-            const raw = localStorage.getItem(SETTINGS_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
+    function selectDog(dogId) {
+        if (currentDogId === dogId) return;
+
+        // Detach old listeners
+        detachListeners();
+
+        currentDogId = dogId;
+        localStorage.setItem('melucafeeder_currentDog', dogId);
+        firstLoad = true;
+
+        showApp();
+        render();
+        attachDogListeners(dogId);
+        renderDogSelector();
     }
 
-    function loadSettingsFromFirebase() {
-        if (!db) return;
-        db.ref('settings').on('value', function (snapshot) {
-            const cloudSettings = snapshot.val();
+    function renderDogSelector() {
+        var dogIds = Object.keys(userDogs);
+        if (dogIds.length <= 1) {
+            // Load dog name for title
+            if (currentDogId) {
+                db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
+                    dogSelectorEl.innerHTML = '<span class="current-dog-name">' + escapeHtml(snap.val() || 'Cão') + '</span>';
+                });
+            }
+            return;
+        }
+
+        // Multiple dogs: show selector
+        db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
+            var currentName = snap.val() || 'Cão';
+            dogSelectorEl.innerHTML = '<select id="dogSelect" class="dog-select"></select>';
+            var selectEl = document.getElementById('dogSelect');
+
+            dogIds.forEach(function (id) {
+                db.ref('dogs/' + id + '/name').once('value', function (nameSnap) {
+                    var opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = nameSnap.val() || id;
+                    opt.selected = id === currentDogId;
+                    selectEl.appendChild(opt);
+                });
+            });
+
+            selectEl.addEventListener('change', function () {
+                selectDog(selectEl.value);
+            });
+        });
+    }
+
+    // === Firebase Listeners (per dog) ===
+    function dogRef(path) {
+        return db.ref('dogs/' + currentDogId + '/' + path);
+    }
+
+    function attachDogListeners(dogId) {
+        var stateRef = dogRef('state');
+        stateRef.on('value', function (snapshot) {
+            var cloudState = snapshot.val();
+            if (cloudState) {
+                var cloudProcessed = cloudState.lastProcessed || 0;
+                if (cloudProcessed >= state.lastProcessed || firstLoad) {
+                    state.stock = cloudState.stock || 0;
+                    state.lastProcessed = cloudProcessed;
+                }
+
+                if (firstLoad) {
+                    firstLoad = false;
+                    processAutoDeductions();
+                }
+
+                render();
+                updateSyncStatus('synced');
+            } else {
+                firstLoad = false;
+                updateSyncStatus('synced');
+            }
+        });
+        listeners.push({ ref: stateRef, event: 'value' });
+
+        var historyRef = dogRef('history');
+        historyRef.orderByChild('date').limitToLast(50).on('value', function (snapshot) {
+            var data = snapshot.val();
+            if (data) {
+                history = Object.values(data).sort(function (a, b) {
+                    return new Date(b.date) - new Date(a.date);
+                });
+                renderHistory();
+                renderCalendar();
+            } else {
+                history = [];
+                renderHistory();
+                renderCalendar();
+            }
+        });
+        listeners.push({ ref: historyRef, event: 'value' });
+
+        var settingsRef = dogRef('settings');
+        settingsRef.on('value', function (snapshot) {
+            var cloudSettings = snapshot.val();
             if (cloudSettings) {
                 settings = cloudSettings;
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
             }
         });
+        listeners.push({ ref: settingsRef, event: 'value' });
+
+        var weightRef = dogRef('weight');
+        weightRef.orderByChild('date').on('value', function (snapshot) {
+            var data = snapshot.val();
+            if (data) {
+                weightData = Object.values(data).sort(function (a, b) {
+                    return new Date(a.date) - new Date(b.date);
+                });
+            } else {
+                weightData = [];
+            }
+            renderWeight();
+            checkWeightReminder();
+        });
+        listeners.push({ ref: weightRef, event: 'value' });
+
+        var vetRef = dogRef('vet');
+        vetRef.on('value', function (snapshot) {
+            var data = snapshot.val();
+            vetData = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
+            vetData.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+            renderVet();
+            checkVetReminders();
+        });
+        listeners.push({ ref: vetRef, event: 'value' });
+
+        var healthRef = dogRef('healthNotes');
+        healthRef.on('value', function (snapshot) {
+            var data = snapshot.val();
+            healthNotes = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
+            healthNotes.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+            renderHealthNotes();
+        });
+        listeners.push({ ref: healthRef, event: 'value' });
+    }
+
+    function detachListeners() {
+        listeners.forEach(function (l) {
+            l.ref.off(l.event);
+        });
+        listeners = [];
+    }
+
+    // === Settings ===
+    function loadLocalSettings() {
+        try {
+            var raw = localStorage.getItem(SETTINGS_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) { /* ignore */ }
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
     }
 
     // === Firebase Write ===
     function saveState() {
-        if (db) {
-            db.ref('state').set({
+        if (db && currentDogId) {
+            dogRef('state').set({
                 stock: state.stock,
                 lastProcessed: state.lastProcessed
             });
@@ -200,7 +470,7 @@
     }
 
     function addHistoryEntry(type, quantity, description) {
-        const entry = {
+        var entry = {
             type: type,
             quantity: quantity,
             description: description,
@@ -208,29 +478,26 @@
         };
         history.unshift(entry);
 
-        if (db) {
-            db.ref('history').push(entry);
+        if (db && currentDogId) {
+            dogRef('history').push(entry);
         }
     }
 
     // === Auto Deduction Logic ===
-    const MAX_AUTO_DEDUCTIONS = 4; // Safety cap: max 2 days (4 meals)
-
     function processAutoDeductions() {
         if (state.lastProcessed === 0) return;
 
-        const now = new Date();
-        const lastProcessed = new Date(state.lastProcessed);
+        var now = new Date();
+        var lastProcessed = new Date(state.lastProcessed);
 
-        // Safety: if lastProcessed is in the future, just update timestamp
         if (lastProcessed > now) {
             state.lastProcessed = now.getTime();
             saveState();
             return;
         }
 
-        let deducted = 0;
-        let cursor = new Date(lastProcessed);
+        var deducted = 0;
+        var cursor = new Date(lastProcessed);
         cursor = getNextMealTime(cursor);
 
         while (cursor <= now && deducted < MAX_AUTO_DEDUCTIONS) {
@@ -246,10 +513,6 @@
             state.lastProcessed = now.getTime();
             saveState();
             checkAlert();
-            // Warn if cap was hit (potential stale data issue)
-            if (deducted >= MAX_AUTO_DEDUCTIONS) {
-                console.warn('MelucaFeeder: Auto-deduction capped at ' + MAX_AUTO_DEDUCTIONS + '. Possible stale lastProcessed.');
-            }
         } else {
             state.lastProcessed = now.getTime();
             saveState();
@@ -257,9 +520,9 @@
     }
 
     function getNextMealTime(fromDate) {
-        const d = new Date(fromDate);
-        const hour = d.getHours();
-        const result = new Date(d);
+        var d = new Date(fromDate);
+        var hour = d.getHours();
+        var result = new Date(d);
 
         if (hour < MORNING_HOUR) {
             result.setHours(MORNING_HOUR, 0, 0, 0);
@@ -283,18 +546,18 @@
     }
 
     function getNextMealTimes() {
-        const now = new Date();
-        const morningToday = new Date(now);
+        var now = new Date();
+        var morningToday = new Date(now);
         morningToday.setHours(MORNING_HOUR, 0, 0, 0);
-        const eveningToday = new Date(now);
+        var eveningToday = new Date(now);
         eveningToday.setHours(EVENING_HOUR, 0, 0, 0);
 
-        let nextMorning, nextEvening;
+        var nextMorning, nextEvening;
 
         if (now < morningToday) {
             nextMorning = morningToday;
         } else {
-            const tomorrow = new Date(now);
+            var tomorrow = new Date(now);
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(MORNING_HOUR, 0, 0, 0);
             nextMorning = tomorrow;
@@ -303,10 +566,10 @@
         if (now < eveningToday) {
             nextEvening = eveningToday;
         } else {
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(EVENING_HOUR, 0, 0, 0);
-            nextEvening = tomorrow;
+            var tomorrowEve = new Date(now);
+            tomorrowEve.setDate(tomorrowEve.getDate() + 1);
+            tomorrowEve.setHours(EVENING_HOUR, 0, 0, 0);
+            nextEvening = tomorrowEve;
         }
 
         return { nextMorning: nextMorning, nextEvening: nextEvening };
@@ -327,14 +590,12 @@
             return;
         }
 
-        // Support multiple chat IDs separated by comma
         var chatIds = String(settings.telegramChatId).split(',').map(function (id) { return id.trim(); }).filter(Boolean);
         var url = 'https://api.telegram.org/bot' + settings.telegramToken + '/sendMessage';
-        var results = [];
 
         for (var i = 0; i < chatIds.length; i++) {
             try {
-                var response = await fetch(url, {
+                await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -343,20 +604,10 @@
                         parse_mode: 'HTML'
                     })
                 });
-
-                if (!response.ok) {
-                    console.error('Telegram API error for chat ' + chatIds[i] + ':', await response.json());
-                    results.push(false);
-                } else {
-                    results.push(true);
-                }
             } catch (e) {
                 console.error('Notification error for chat ' + chatIds[i] + ':', e);
-                results.push(false);
             }
         }
-
-        return results.some(function (r) { return r; });
     }
 
     // === Render ===
@@ -374,12 +625,12 @@
             stockStatusEl.textContent = 'Stock baixo (alerta: ' + settings.alertThreshold + ')';
             stockStatusEl.classList.add('warning');
         } else {
-            const days = Math.floor(state.stock / 2);
+            var days = Math.floor(state.stock / 2);
             stockStatusEl.textContent = '≈ ' + days + ' dias de autonomia';
             stockStatusEl.style.color = '';
         }
 
-        const meals = getNextMealTimes();
+        var meals = getNextMealTimes();
         nextMorningEl.textContent = formatRelativeTime(meals.nextMorning);
         nextEveningEl.textContent = formatRelativeTime(meals.nextEvening);
 
@@ -391,6 +642,21 @@
         }
     }
 
+    function renderRuptureInfo() {
+        if (state.stock <= 0) {
+            ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
+            return;
+        }
+        var daysLeft = state.stock / 2;
+        var ruptureDate = new Date();
+        ruptureDate.setDate(ruptureDate.getDate() + Math.floor(daysLeft));
+        var day = String(ruptureDate.getDate()).padStart(2, '0');
+        var month = String(ruptureDate.getMonth() + 1).padStart(2, '0');
+
+        var cls = daysLeft <= 3 ? 'rupture-danger' : daysLeft <= 7 ? 'rupture-warning' : 'rupture-ok';
+        ruptureInfoEl.innerHTML = '<span class="' + cls + '">Stock acaba a <strong>' + day + '/' + month + '</strong> (' + Math.floor(daysLeft) + ' dias)</span>';
+    }
+
     function renderHistory() {
         if (history.length === 0) {
             historyListEl.innerHTML = '<p class="empty-history">Sem registos</p>';
@@ -398,8 +664,8 @@
         }
 
         historyListEl.innerHTML = history.slice(0, 20).map(function (entry) {
-            const typeClass = entry.quantity > 0 ? 'add' : 'deduct';
-            const sign = entry.quantity > 0 ? '+' : '';
+            var typeClass = entry.quantity > 0 ? 'add' : 'deduct';
+            var sign = entry.quantity > 0 ? '+' : '';
             return '<div class="history-item">' +
                 '<span class="type ' + typeClass + '">' + sign + entry.quantity + '</span>' +
                 '<span>' + escapeHtml(entry.description) + '</span>' +
@@ -411,7 +677,7 @@
     function updateSyncStatus(status) {
         if (!syncStatusEl) return;
         syncStatusEl.className = 'sync-status ' + status;
-        const labels = {
+        var labels = {
             syncing: '⟳ A sincronizar...',
             synced: '✓ Sincronizado',
             error: '✗ Erro de sync',
@@ -422,6 +688,19 @@
 
     // === Events ===
     function bindEvents() {
+        // Auth
+        googleLoginBtn.addEventListener('click', handleGoogleLogin);
+        logoutBtn.addEventListener('click', handleLogout);
+        createDogBtnEl.addEventListener('click', handleCreateDog);
+        joinDogBtnEl.addEventListener('click', handleJoinDog);
+        newDogNameEl.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleCreateDog();
+        });
+        inviteCodeEl.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') handleJoinDog();
+        });
+
+        // App
         addBtnEl.addEventListener('click', handleAdd);
         addQuantityEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleAdd();
@@ -456,48 +735,41 @@
             });
         });
 
-        // Init calendar
+        // Init calendar + vet date
         renderCalendar();
-
-        // Set today's date as default for vet
         vetDateEl.value = new Date().toISOString().slice(0, 10);
     }
 
+    // === Handlers ===
     function handleCalculate() {
-        const recipe = settings.recipe || {
-            chicken: 50,
-            rice: 50,
-            peas: 25,
-            egg: 0.5
-        };
+        var recipe = settings.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
+        var chicken = parseFloat(calcChickenEl.value) || 0;
+        var rice = parseFloat(calcRiceEl.value) || 0;
+        var peas = parseFloat(calcPeasEl.value) || 0;
+        var eggs = parseFloat(calcEggsEl.value) || 0;
 
-        const chicken = parseFloat(calcChickenEl.value) || 0;
-        const rice = parseFloat(calcRiceEl.value) || 0;
-        const peas = parseFloat(calcPeasEl.value) || 0;
-        const eggs = parseFloat(calcEggsEl.value) || 0;
-
-        const meals = [];
-        const details = [];
+        var meals = [];
+        var details = [];
 
         if (recipe.chicken > 0 && chicken > 0) {
-            const m = Math.floor(chicken / recipe.chicken);
+            var m = Math.floor(chicken / recipe.chicken);
             meals.push(m);
             details.push('Frango: ' + m + ' refeições (' + recipe.chicken + 'g/ref)');
         }
         if (recipe.rice > 0 && rice > 0) {
-            const m = Math.floor(rice / recipe.rice);
-            meals.push(m);
-            details.push('Arroz: ' + m + ' refeições (' + recipe.rice + 'g/ref)');
+            var m2 = Math.floor(rice / recipe.rice);
+            meals.push(m2);
+            details.push('Arroz: ' + m2 + ' refeições (' + recipe.rice + 'g/ref)');
         }
         if (recipe.peas > 0 && peas > 0) {
-            const m = Math.floor(peas / recipe.peas);
-            meals.push(m);
-            details.push('Ervilhas: ' + m + ' refeições (' + recipe.peas + 'g/ref)');
+            var m3 = Math.floor(peas / recipe.peas);
+            meals.push(m3);
+            details.push('Ervilhas: ' + m3 + ' refeições (' + recipe.peas + 'g/ref)');
         }
         if (recipe.egg > 0 && eggs > 0) {
-            const m = Math.floor(eggs / recipe.egg);
-            meals.push(m);
-            details.push('Ovos: ' + m + ' refeições (' + recipe.egg + ' un/ref)');
+            var m4 = Math.floor(eggs / recipe.egg);
+            meals.push(m4);
+            details.push('Ovos: ' + m4 + ' refeições (' + recipe.egg + ' un/ref)');
         }
 
         if (meals.length === 0) {
@@ -505,14 +777,14 @@
             return;
         }
 
-        const minMeals = Math.min.apply(null, meals);
+        var minMeals = Math.min.apply(null, meals);
         calcResultNumberEl.textContent = minMeals;
         calcResultDetailEl.innerHTML = details.join('<br>');
         calcResultEl.style.display = '';
     }
 
     function handleAdd() {
-        const qty = parseInt(addQuantityEl.value, 10);
+        var qty = parseInt(addQuantityEl.value, 10);
         if (isNaN(qty) || qty < 1) {
             showToast('Introduz uma quantidade válida');
             return;
@@ -550,243 +822,6 @@
         showToast('1 refeição adicionada');
     }
 
-    // === Schedule ===
-    function scheduleNextCheck() {
-        setInterval(function () {
-            const previousStock = state.stock;
-            processAutoDeductions();
-            if (state.stock !== previousStock) {
-                render();
-            }
-        }, 60000);
-    }
-
-    // === Utilities ===
-    function formatRelativeTime(date) {
-        const now = new Date();
-        const diff = date - now;
-        const hours = Math.floor(diff / 3600000);
-        const minutes = Math.floor((diff % 3600000) / 60000);
-
-        if (hours > 0) {
-            return 'em ' + hours + 'h ' + minutes + 'min';
-        }
-        return 'em ' + minutes + 'min';
-    }
-
-    function formatDateTime(date) {
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return day + '/' + month + ' ' + hours + ':' + minutes;
-    }
-
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function showToast(message) {
-        toastEl.textContent = message;
-        toastEl.classList.add('show');
-        setTimeout(function () {
-            toastEl.classList.remove('show');
-        }, 3000);
-    }
-
-    // === Weight Tracking ===
-    function handleWeightAdd() {
-        const weight = parseFloat(weightInputEl.value);
-        if (isNaN(weight) || weight <= 0) {
-            showToast('Introduz um peso válido');
-            return;
-        }
-
-        const entry = {
-            weight: weight,
-            date: new Date().toISOString()
-        };
-
-        if (db) {
-            db.ref('weight').push(entry);
-        }
-
-        weightInputEl.value = '';
-        showToast(weight + ' kg registado');
-    }
-
-    function renderWeight() {
-        if (weightData.length === 0) {
-            weightLastEl.textContent = '';
-            weightHistoryEl.innerHTML = '<p class="empty-history">Sem registos de peso</p>';
-            clearChart();
-            return;
-        }
-
-        const last = weightData[weightData.length - 1];
-        const lastDate = new Date(last.date);
-        const daysAgo = Math.floor((Date.now() - lastDate.getTime()) / 86400000);
-        const daysText = daysAgo === 0 ? 'hoje' : daysAgo === 1 ? 'ontem' : 'há ' + daysAgo + ' dias';
-        weightLastEl.innerHTML = '<span class="weight-current">' + last.weight + ' kg</span> <span class="weight-date">(' + daysText + ')</span>';
-
-        // Render last entries
-        const recent = weightData.slice(-10).reverse();
-        weightHistoryEl.innerHTML = recent.map(function (e) {
-            const d = new Date(e.date);
-            return '<div class="weight-entry"><span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span></div>';
-        }).join('');
-
-        drawChart();
-    }
-
-    function clearChart() {
-        const ctx = weightChartEl.getContext('2d');
-        ctx.clearRect(0, 0, weightChartEl.width, weightChartEl.height);
-    }
-
-    function drawChart() {
-        const canvas = weightChartEl;
-        const ctx = canvas.getContext('2d');
-        const dpr = window.devicePixelRatio || 1;
-
-        canvas.width = canvas.offsetWidth * dpr;
-        canvas.height = canvas.offsetHeight * dpr;
-        ctx.scale(dpr, dpr);
-
-        const w = canvas.offsetWidth;
-        const h = canvas.offsetHeight;
-        const padding = { top: 20, right: 20, bottom: 30, left: 45 };
-        const chartW = w - padding.left - padding.right;
-        const chartH = h - padding.top - padding.bottom;
-
-        ctx.clearRect(0, 0, w, h);
-
-        if (weightData.length < 2) {
-            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
-            ctx.font = '12px -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Regista pelo menos 2 pesos para ver o gráfico', w / 2, h / 2);
-            return;
-        }
-
-        const data = weightData.slice(-20);
-        const weights = data.map(function (e) { return e.weight; });
-        const targetWeight = settings.targetWeight ? parseFloat(settings.targetWeight) : null;
-
-        // Include target weight in min/max calculation
-        var allValues = weights.slice();
-        if (targetWeight) allValues.push(targetWeight);
-        const minW = Math.min.apply(null, allValues) - 0.5;
-        const maxW = Math.max.apply(null, allValues) + 0.5;
-        const range = maxW - minW || 1;
-
-        const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
-        const lineColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim() || '#818cf8';
-        const dotColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6366f1';
-        const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
-
-        // Grid lines
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 1;
-        for (var i = 0; i <= 4; i++) {
-            var y = padding.top + chartH - (chartH * i / 4);
-            ctx.beginPath();
-            ctx.moveTo(padding.left, y);
-            ctx.lineTo(padding.left + chartW, y);
-            ctx.stroke();
-
-            var label = (minW + range * i / 4).toFixed(1);
-            ctx.fillStyle = textColor;
-            ctx.font = '10px -apple-system, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText(label, padding.left - 6, y + 3);
-        }
-
-        // Target weight line
-        if (targetWeight) {
-            var targetY = padding.top + chartH - (chartH * (targetWeight - minW) / range);
-            ctx.beginPath();
-            ctx.setLineDash([6, 4]);
-            ctx.strokeStyle = '#f472b6';
-            ctx.lineWidth = 1.5;
-            ctx.moveTo(padding.left, targetY);
-            ctx.lineTo(padding.left + chartW, targetY);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#f472b6';
-            ctx.font = '10px -apple-system, sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('Obj: ' + targetWeight + ' kg', padding.left + 4, targetY - 5);
-        }
-
-        // Date labels
-        ctx.fillStyle = textColor;
-        ctx.font = '10px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        var firstDate = new Date(data[0].date);
-        var lastDate = new Date(data[data.length - 1].date);
-        ctx.fillText(formatShortDate(firstDate), padding.left, h - 8);
-        ctx.fillText(formatShortDate(lastDate), padding.left + chartW, h - 8);
-
-        // Line
-        ctx.beginPath();
-        ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 2.5;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-
-        var points = [];
-        for (var j = 0; j < data.length; j++) {
-            var x = padding.left + (chartW * j / (data.length - 1));
-            var yVal = padding.top + chartH - (chartH * (data[j].weight - minW) / range);
-            points.push({ x: x, y: yVal });
-            if (j === 0) ctx.moveTo(x, yVal);
-            else ctx.lineTo(x, yVal);
-        }
-        ctx.stroke();
-
-        // Gradient fill
-        ctx.lineTo(padding.left + chartW, padding.top + chartH);
-        ctx.lineTo(padding.left, padding.top + chartH);
-        ctx.closePath();
-        var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
-        ctx.fillStyle = gradient;
-        ctx.fill();
-
-        // Dots
-        for (var k = 0; k < points.length; k++) {
-            ctx.beginPath();
-            ctx.arc(points[k].x, points[k].y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = dotColor;
-            ctx.fill();
-        }
-    }
-
-    function formatShortDate(date) {
-        return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
-    }
-
-    // === Rupture Prediction ===
-    function renderRuptureInfo() {
-        if (state.stock <= 0) {
-            ruptureInfoEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
-            return;
-        }
-        var mealsPerDay = 2;
-        var daysLeft = state.stock / mealsPerDay;
-        var ruptureDate = new Date();
-        ruptureDate.setDate(ruptureDate.getDate() + Math.floor(daysLeft));
-        var day = String(ruptureDate.getDate()).padStart(2, '0');
-        var month = String(ruptureDate.getMonth() + 1).padStart(2, '0');
-
-        var cls = daysLeft <= 3 ? 'rupture-danger' : daysLeft <= 7 ? 'rupture-warning' : 'rupture-ok';
-        ruptureInfoEl.innerHTML = '<span class="' + cls + '">Stock acaba a <strong>' + day + '/' + month + '</strong> (' + Math.floor(daysLeft) + ' dias)</span>';
-    }
-
     // === Shopping List ===
     function handleShoppingList() {
         var target = parseInt(shoppingTargetEl.value, 10);
@@ -799,19 +834,19 @@
         var items = [];
         if (recipe.chicken > 0) {
             var totalChicken = recipe.chicken * target;
-            items.push({ name: 'Frango', amount: totalChicken, unit: 'g', display: totalChicken >= 1000 ? (totalChicken / 1000).toFixed(1) + ' kg' : totalChicken + ' g' });
+            items.push({ name: 'Frango', display: totalChicken >= 1000 ? (totalChicken / 1000).toFixed(1) + ' kg' : totalChicken + ' g' });
         }
         if (recipe.rice > 0) {
             var totalRice = recipe.rice * target;
-            items.push({ name: 'Arroz', amount: totalRice, unit: 'g', display: totalRice >= 1000 ? (totalRice / 1000).toFixed(1) + ' kg' : totalRice + ' g' });
+            items.push({ name: 'Arroz', display: totalRice >= 1000 ? (totalRice / 1000).toFixed(1) + ' kg' : totalRice + ' g' });
         }
         if (recipe.peas > 0) {
             var totalPeas = recipe.peas * target;
-            items.push({ name: 'Ervilhas', amount: totalPeas, unit: 'g', display: totalPeas >= 1000 ? (totalPeas / 1000).toFixed(1) + ' kg' : totalPeas + ' g' });
+            items.push({ name: 'Ervilhas', display: totalPeas >= 1000 ? (totalPeas / 1000).toFixed(1) + ' kg' : totalPeas + ' g' });
         }
         if (recipe.egg > 0) {
             var totalEggs = Math.ceil(recipe.egg * target);
-            items.push({ name: 'Ovos', amount: totalEggs, unit: 'un', display: totalEggs + ' un' });
+            items.push({ name: 'Ovos', display: totalEggs + ' un' });
         }
 
         shoppingListEl.style.display = '';
@@ -828,26 +863,11 @@
         var date = vetDateEl.value;
         var nextDate = vetNextDateEl.value;
 
-        if (!desc) {
-            showToast('Adiciona uma descrição');
-            return;
-        }
-        if (!date) {
-            showToast('Selecciona a data');
-            return;
-        }
+        if (!desc) { showToast('Adiciona uma descrição'); return; }
+        if (!date) { showToast('Selecciona a data'); return; }
 
-        var entry = {
-            type: type,
-            description: desc,
-            date: date,
-            nextDate: nextDate || null,
-            createdAt: new Date().toISOString()
-        };
-
-        if (db) {
-            db.ref('vet').push(entry);
-        }
+        var entry = { type: type, description: desc, date: date, nextDate: nextDate || null, createdAt: new Date().toISOString() };
+        if (db && currentDogId) dogRef('vet').push(entry);
 
         vetDescEl.value = '';
         vetNextDateEl.value = '';
@@ -856,8 +876,6 @@
 
     function renderVet() {
         var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '🪱 Desparasitação', outro: '📋 Outro' };
-
-        // Upcoming appointments
         var today = new Date().toISOString().slice(0, 10);
         var upcoming = vetData.filter(function (e) { return e.nextDate && e.nextDate >= today; })
             .sort(function (a, b) { return a.nextDate.localeCompare(b.nextDate); });
@@ -872,12 +890,10 @@
             vetUpcomingEl.innerHTML = '';
         }
 
-        // History
         if (vetData.length === 0) {
             vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
             return;
         }
-
         vetHistoryEl.innerHTML = '<h3>Histórico</h3>' + vetData.slice(0, 20).map(function (e) {
             var d = e.date.split('-');
             return '<div class="vet-item"><span class="vet-type">' + (typeLabels[e.type] || e.type) +
@@ -911,20 +927,9 @@
     // === Health Notes ===
     function handleHealthNote() {
         var text = healthNoteTextEl.value.trim();
-        if (!text) {
-            showToast('Escreve uma nota');
-            return;
-        }
+        if (!text) { showToast('Escreve uma nota'); return; }
 
-        var entry = {
-            text: text,
-            date: new Date().toISOString()
-        };
-
-        if (db) {
-            db.ref('healthNotes').push(entry);
-        }
-
+        if (db && currentDogId) dogRef('healthNotes').push({ text: text, date: new Date().toISOString() });
         healthNoteTextEl.value = '';
         showToast('Nota adicionada');
     }
@@ -934,7 +939,6 @@
             healthNotesListEl.innerHTML = '<p class="empty-history">Sem notas de saúde</p>';
             return;
         }
-
         healthNotesListEl.innerHTML = healthNotes.slice(0, 30).map(function (e) {
             var d = new Date(e.date);
             return '<div class="health-note-item"><span class="health-note-text">' + escapeHtml(e.text) + '</span><span class="date">' + formatDateTime(d) + '</span></div>';
@@ -946,11 +950,9 @@
         var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         calMonthEl.textContent = monthNames[calendarMonth] + ' ' + calendarYear;
 
-        var firstDay = new Date(calendarYear, calendarMonth, 1);
         var lastDay = new Date(calendarYear, calendarMonth + 1, 0);
-        var startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+        var startDow = (new Date(calendarYear, calendarMonth, 1).getDay() + 6) % 7;
 
-        // Count meals per day from history (all deductions = meals given)
         var mealCounts = {};
         history.forEach(function (e) {
             if (e.quantity < 0) {
@@ -963,10 +965,7 @@
         });
 
         var html = '<div class="cal-header">S</div><div class="cal-header">T</div><div class="cal-header">Q</div><div class="cal-header">Q</div><div class="cal-header">S</div><div class="cal-header">S</div><div class="cal-header">D</div>';
-
-        for (var i = 0; i < startDow; i++) {
-            html += '<div class="cal-empty"></div>';
-        }
+        for (var i = 0; i < startDow; i++) html += '<div class="cal-empty"></div>';
 
         var today = new Date();
         for (var day = 1; day <= lastDay.getDate(); day++) {
@@ -982,8 +981,162 @@
             }
             html += '<div class="' + cls + '"><span class="cal-num">' + day + '</span>' + (count > 0 ? '<span class="cal-count">' + count + '</span>' : '') + '</div>';
         }
-
         calendarGridEl.innerHTML = html;
+    }
+
+    // === Weight Tracking ===
+    function handleWeightAdd() {
+        var weight = parseFloat(weightInputEl.value);
+        if (isNaN(weight) || weight <= 0) {
+            showToast('Introduz um peso válido');
+            return;
+        }
+
+        if (db && currentDogId) {
+            dogRef('weight').push({ weight: weight, date: new Date().toISOString() });
+        }
+        weightInputEl.value = '';
+        showToast(weight + ' kg registado');
+    }
+
+    function renderWeight() {
+        if (weightData.length === 0) {
+            weightLastEl.textContent = '';
+            weightHistoryEl.innerHTML = '<p class="empty-history">Sem registos de peso</p>';
+            clearChart();
+            return;
+        }
+
+        var last = weightData[weightData.length - 1];
+        var lastDate = new Date(last.date);
+        var daysAgo = Math.floor((Date.now() - lastDate.getTime()) / 86400000);
+        var daysText = daysAgo === 0 ? 'hoje' : daysAgo === 1 ? 'ontem' : 'há ' + daysAgo + ' dias';
+        weightLastEl.innerHTML = '<span class="weight-current">' + last.weight + ' kg</span> <span class="weight-date">(' + daysText + ')</span>';
+
+        var recent = weightData.slice(-10).reverse();
+        weightHistoryEl.innerHTML = recent.map(function (e) {
+            var d = new Date(e.date);
+            return '<div class="weight-entry"><span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span></div>';
+        }).join('');
+
+        drawChart();
+    }
+
+    function clearChart() {
+        var ctx = weightChartEl.getContext('2d');
+        ctx.clearRect(0, 0, weightChartEl.width, weightChartEl.height);
+    }
+
+    function drawChart() {
+        var canvas = weightChartEl;
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+
+        canvas.width = canvas.offsetWidth * dpr;
+        canvas.height = canvas.offsetHeight * dpr;
+        ctx.scale(dpr, dpr);
+
+        var w = canvas.offsetWidth;
+        var h = canvas.offsetHeight;
+        var padding = { top: 20, right: 20, bottom: 30, left: 45 };
+        var chartW = w - padding.left - padding.right;
+        var chartH = h - padding.top - padding.bottom;
+
+        ctx.clearRect(0, 0, w, h);
+
+        if (weightData.length < 2) {
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+            ctx.font = '12px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Regista pelo menos 2 pesos para ver o gráfico', w / 2, h / 2);
+            return;
+        }
+
+        var data = weightData.slice(-20);
+        var weights = data.map(function (e) { return e.weight; });
+        var targetWeight = settings.targetWeight ? parseFloat(settings.targetWeight) : null;
+
+        var allValues = weights.slice();
+        if (targetWeight) allValues.push(targetWeight);
+        var minW = Math.min.apply(null, allValues) - 0.5;
+        var maxW = Math.max.apply(null, allValues) + 0.5;
+        var range = maxW - minW || 1;
+
+        var textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim();
+        var lineColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-light').trim() || '#818cf8';
+        var dotColor = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() || '#6366f1';
+        var gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || 'rgba(255,255,255,0.08)';
+
+        ctx.strokeStyle = gridColor;
+        ctx.lineWidth = 1;
+        for (var i = 0; i <= 4; i++) {
+            var y = padding.top + chartH - (chartH * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + chartW, y);
+            ctx.stroke();
+            ctx.fillStyle = textColor;
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText((minW + range * i / 4).toFixed(1), padding.left - 6, y + 3);
+        }
+
+        if (targetWeight) {
+            var targetY = padding.top + chartH - (chartH * (targetWeight - minW) / range);
+            ctx.beginPath();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#f472b6';
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(padding.left, targetY);
+            ctx.lineTo(padding.left + chartW, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#f472b6';
+            ctx.font = '10px -apple-system, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Obj: ' + targetWeight + ' kg', padding.left + 4, targetY - 5);
+        }
+
+        ctx.fillStyle = textColor;
+        ctx.font = '10px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(formatShortDate(new Date(data[0].date)), padding.left, h - 8);
+        ctx.fillText(formatShortDate(new Date(data[data.length - 1].date)), padding.left + chartW, h - 8);
+
+        ctx.beginPath();
+        ctx.strokeStyle = lineColor;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        var points = [];
+        for (var j = 0; j < data.length; j++) {
+            var x = padding.left + (chartW * j / (data.length - 1));
+            var yVal = padding.top + chartH - (chartH * (data[j].weight - minW) / range);
+            points.push({ x: x, y: yVal });
+            if (j === 0) ctx.moveTo(x, yVal); else ctx.lineTo(x, yVal);
+        }
+        ctx.stroke();
+
+        ctx.lineTo(padding.left + chartW, padding.top + chartH);
+        ctx.lineTo(padding.left, padding.top + chartH);
+        ctx.closePath();
+        var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
+        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        for (var k = 0; k < points.length; k++) {
+            ctx.beginPath();
+            ctx.arc(points[k].x, points[k].y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = dotColor;
+            ctx.fill();
+        }
+    }
+
+    function formatShortDate(date) {
+        return String(date.getDate()).padStart(2, '0') + '/' + String(date.getMonth() + 1).padStart(2, '0');
     }
 
     function checkWeightReminder() {
@@ -996,21 +1149,60 @@
 
         if (daysSince >= 7 && lastReminder !== today) {
             localStorage.setItem(reminderKey, today);
-            sendNotification('⚖️ MelucaFeeder: Já passaram ' + daysSince + ' dias desde a última pesagem. Hora de pesar a Meluca!');
+            sendNotification('⚖️ MelucaFeeder: Já passaram ' + daysSince + ' dias desde a última pesagem. Hora de pesar!');
         }
+    }
+
+    // === Schedule ===
+    function scheduleNextCheck() {
+        setInterval(function () {
+            var previousStock = state.stock;
+            processAutoDeductions();
+            if (state.stock !== previousStock) render();
+        }, 60000);
+    }
+
+    // === Utilities ===
+    function formatRelativeTime(date) {
+        var now = new Date();
+        var diff = date - now;
+        var hours = Math.floor(diff / 3600000);
+        var minutes = Math.floor((diff % 3600000) / 60000);
+        if (hours > 0) return 'em ' + hours + 'h ' + minutes + 'min';
+        return 'em ' + minutes + 'min';
+    }
+
+    function formatDateTime(date) {
+        var day = String(date.getDate()).padStart(2, '0');
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var hours = String(date.getHours()).padStart(2, '0');
+        var minutes = String(date.getMinutes()).padStart(2, '0');
+        return day + '/' + month + ' ' + hours + ':' + minutes;
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function showToast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add('show');
+        setTimeout(function () { toastEl.classList.remove('show'); }, 3000);
     }
 
     // === Theme Toggle ===
     function initTheme() {
-        const saved = localStorage.getItem('melucafeeder_theme');
-        const themeToggle = document.getElementById('themeToggle');
+        var saved = localStorage.getItem('melucafeeder_theme');
+        var themeToggle = document.getElementById('themeToggle');
         if (saved === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
             themeToggle.textContent = '☀️';
         }
 
         themeToggle.addEventListener('click', function () {
-            const current = document.documentElement.getAttribute('data-theme');
+            var current = document.documentElement.getAttribute('data-theme');
             if (current === 'light') {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('melucafeeder_theme', 'dark');
@@ -1025,5 +1217,7 @@
 
     // === Start ===
     initTheme();
-    init();
+    bindEvents();
+    scheduleNextCheck();
+    initFirebase();
 })();

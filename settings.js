@@ -2,7 +2,6 @@
     'use strict';
 
     const SETTINGS_KEY = 'melucafeeder_settings';
-    const AUTH_HASH = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256 of "1234"
 
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
@@ -15,6 +14,9 @@
     };
 
     let db = null;
+    let currentUser = null;
+    let currentDogId = null;
+
     try {
         if (!firebase.apps.length) {
             firebase.initializeApp(FIREBASE_CONFIG);
@@ -25,18 +27,18 @@
     }
 
     const loginSection = document.getElementById('loginSection');
-    const settingsPanel = document.getElementById('settingsPanel');
     const alertPanel = document.getElementById('alertPanel');
     const telegramPanel = document.getElementById('telegramPanel');
     const recipePanel = document.getElementById('recipePanel');
     const weightPanel = document.getElementById('weightPanel');
+    const invitePanel = document.getElementById('invitePanel');
     const actionsPanel = document.getElementById('actionsPanel');
-    const loginBtn = document.getElementById('loginBtn');
-    const loginUser = document.getElementById('loginUser');
-    const loginPass = document.getElementById('loginPass');
-    const loginError = document.getElementById('loginError');
+    const dogNameSubtitle = document.getElementById('dogNameSubtitle');
     const saveSettingsBtn = document.getElementById('saveSettings');
     const testNotificationBtn = document.getElementById('testNotification');
+    const generateInviteBtn = document.getElementById('generateInvite');
+    const inviteResultEl = document.getElementById('inviteResult');
+    const membersListEl = document.getElementById('membersList');
     const toastEl = document.getElementById('toast');
 
     const alertThresholdEl = document.getElementById('alertThreshold');
@@ -48,74 +50,53 @@
     const recipeEggEl = document.getElementById('recipeEgg');
     const targetWeightEl = document.getElementById('targetWeight');
 
-    function loadSettings() {
-        try {
-            const raw = localStorage.getItem(SETTINGS_KEY);
-            if (raw) return JSON.parse(raw);
-        } catch (e) { /* ignore */ }
-        return {
-            alertThreshold: 5,
-            telegramToken: '',
-            telegramChatId: '',
-            recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 }
-        };
-    }
-
-    function saveSettings(settings) {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    }
-
-    async function sha256(message) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function handleLogin() {
-        const user = loginUser.value.trim();
-        const pass = loginPass.value;
-
-        if (user !== 'admin') {
-            loginError.textContent = 'Utilizador ou password incorrectos';
-            return;
+    // Wait for auth state
+    firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+            currentUser = user;
+            currentDogId = localStorage.getItem('melucafeeder_currentDog');
+            if (currentDogId) {
+                showSettings();
+            } else {
+                dogNameSubtitle.textContent = 'Nenhum cão seleccionado';
+                showToast('Volta à app principal para seleccionar um cão');
+            }
+        } else {
+            // Not logged in
+            loginSection.style.display = '';
+            dogNameSubtitle.textContent = 'Acesso restrito';
         }
-
-        const hash = await sha256(pass);
-        if (hash !== AUTH_HASH) {
-            loginError.textContent = 'Utilizador ou password incorrectos';
-            return;
-        }
-
-        loginError.textContent = '';
-        showSettings();
-    }
+    });
 
     function showSettings() {
         loginSection.style.display = 'none';
-        settingsPanel.style.display = '';
         alertPanel.style.display = '';
         telegramPanel.style.display = '';
         recipePanel.style.display = '';
         weightPanel.style.display = '';
+        invitePanel.style.display = '';
         actionsPanel.style.display = '';
 
-        // Load from Firebase first, fallback to localStorage
-        if (db) {
-            db.ref('settings').once('value', function (snapshot) {
-                const s = snapshot.val() || loadSettings();
-                populateFields(s);
-            });
-        } else {
-            populateFields(loadSettings());
-        }
+        // Load dog name
+        db.ref('dogs/' + currentDogId + '/name').once('value', function (snap) {
+            dogNameSubtitle.textContent = snap.val() || 'Configurações do cão';
+        });
+
+        // Load settings
+        db.ref('dogs/' + currentDogId + '/settings').once('value', function (snapshot) {
+            var s = snapshot.val() || {};
+            populateFields(s);
+        });
+
+        // Load members
+        loadMembers();
     }
 
     function populateFields(s) {
         alertThresholdEl.value = s.alertThreshold || 5;
         telegramTokenEl.value = s.telegramToken || '';
         telegramChatIdEl.value = s.telegramChatId || '';
-        const recipe = s.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
+        var recipe = s.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
         recipeChickenEl.value = recipe.chicken;
         recipeRiceEl.value = recipe.rice;
         recipePeasEl.value = recipe.peas;
@@ -124,7 +105,7 @@
     }
 
     function handleSave() {
-        const settings = {
+        var settings = {
             alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
             telegramToken: telegramTokenEl.value.trim(),
             telegramChatId: telegramChatIdEl.value.trim(),
@@ -138,16 +119,53 @@
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
-        if (db) {
-            db.ref('settings').set(settings);
+        if (db && currentDogId) {
+            db.ref('dogs/' + currentDogId + '/settings').set(settings);
         }
 
         showToast('Configurações guardadas');
     }
 
+    function handleGenerateInvite() {
+        var code = generateCode();
+        var invite = {
+            dogId: currentDogId,
+            createdBy: currentUser.uid,
+            expiresAt: Date.now() + 86400000 // 24h
+        };
+
+        db.ref('invites/' + code).set(invite).then(function () {
+            inviteResultEl.textContent = code;
+            inviteResultEl.classList.add('visible');
+            showToast('Código gerado: ' + code + ' (expira em 24h)');
+        });
+    }
+
+    function generateCode() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars (0/O, 1/I)
+        var code = '';
+        for (var i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
+
+    function loadMembers() {
+        db.ref('dogs/' + currentDogId + '/members').once('value', function (snap) {
+            var members = snap.val() || {};
+            var html = '<h3 style="margin-top: 16px; font-size: 0.85rem; color: var(--text-light);">Membros actuais</h3>';
+            Object.keys(members).forEach(function (uid) {
+                var m = members[uid];
+                var roleLabel = m.role === 'owner' ? '👑 Owner' : '👤 Membro';
+                html += '<div class="vet-item"><span>' + escapeHtml(m.name || uid) + '</span><span class="vet-type">' + roleLabel + '</span></div>';
+            });
+            membersListEl.innerHTML = html;
+        });
+    }
+
     async function handleTestNotification() {
-        const token = telegramTokenEl.value.trim();
-        const chatIdRaw = telegramChatIdEl.value.trim();
+        var token = telegramTokenEl.value.trim();
+        var chatIdRaw = telegramChatIdEl.value.trim();
 
         if (!token || !chatIdRaw) {
             showToast('Configura o Telegram primeiro');
@@ -155,12 +173,12 @@
         }
 
         var chatIds = chatIdRaw.split(',').map(function (id) { return id.trim(); }).filter(Boolean);
-        var url = `https://api.telegram.org/bot${token}/sendMessage`;
+        var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
         var success = 0;
 
         for (var i = 0; i < chatIds.length; i++) {
             try {
-                const response = await fetch(url, {
+                var response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -182,22 +200,20 @@
         }
     }
 
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
     function showToast(message) {
         toastEl.textContent = message;
         toastEl.classList.add('show');
-        setTimeout(function () {
-            toastEl.classList.remove('show');
-        }, 3000);
+        setTimeout(function () { toastEl.classList.remove('show'); }, 3000);
     }
 
     // Events
-    loginBtn.addEventListener('click', handleLogin);
-    loginPass.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') handleLogin();
-    });
-    loginUser.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') loginPass.focus();
-    });
     saveSettingsBtn.addEventListener('click', handleSave);
     testNotificationBtn.addEventListener('click', handleTestNotification);
+    generateInviteBtn.addEventListener('click', handleGenerateInvite);
 })();

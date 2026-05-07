@@ -94,6 +94,182 @@ body {
     padding-bottom: 32px;
 }
 
+/* Login Screen */
+.login-screen,
+.onboarding-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+}
+
+.login-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    text-align: center;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow-lg);
+}
+
+.login-card h1 {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+}
+
+.login-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+}
+
+.login-card .subtitle {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    font-size: 0.9rem;
+}
+
+.btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    justify-content: center;
+}
+
+.btn-google:hover {
+    border-color: var(--primary);
+    background: var(--primary-glow);
+}
+
+.login-note {
+    margin-top: 16px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Onboarding */
+.onboarding-options {
+    text-align: left;
+}
+
+.onboarding-create,
+.onboarding-join {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.onboarding-create h3,
+.onboarding-join h3 {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 4px;
+}
+
+.onboarding-divider {
+    text-align: center;
+    padding: 16px 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    position: relative;
+}
+
+.onboarding-divider::before,
+.onboarding-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--border);
+}
+
+.onboarding-divider::before { left: 0; }
+.onboarding-divider::after { right: 0; }
+
+/* User Bar / Dog Selector */
+.header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.user-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--primary-light);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.btn-link:hover {
+    background: var(--primary-glow);
+}
+
+.dog-selector {
+    min-width: 0;
+}
+
+.current-dog-name {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.dog-select {
+    padding: 6px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-surface);
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.invite-code {
+    font-family: monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-light);
+    letter-spacing: 0.1em;
+    display: none;
+    margin-left: 12px;
+}
+
+.invite-code.visible {
+    display: inline;
+}
+
 /* Tabs */
 .tabs {
     display: flex;
