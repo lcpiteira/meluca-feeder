@@ -403,20 +403,67 @@
         overlay.style.display = '';
 
         var wizardMode = 'homemade';
-        var step = 1;
-        var dots = overlay.querySelectorAll('.setup-progress-dot');
-
-        // Render default recipe in wizard
-        var defaultRecipe = [
-            { id: 'chicken', amount: 50 },
-            { id: 'rice', amount: 50 },
-            { id: 'peas', amount: 25 },
-            { id: 'egg', amount: 0.5 }
+        var selectedIngredients = ['chicken', 'rice', 'peas', 'egg']; // pre-selected defaults
+        var wizardRecipe = [];
+        var allStepEls = overlay.querySelectorAll('.setup-step');
+        var WIZARD_KIBBLE_BRANDS = [
+            { value: 'royal_canin', label: 'Royal Canin' }, { value: 'purina_proplan', label: 'Purina Pro Plan' }, { value: 'hills', label: "Hill's Science Plan" }, { value: 'eukanuba', label: 'Eukanuba' }, { value: 'advance', label: 'Advance (Affinity)' }, { value: 'acana', label: 'Acana' }, { value: 'orijen', label: 'Orijen' }, { value: 'brit_care', label: 'Brit Care' }, { value: 'brit_premium', label: 'Brit Premium' }, { value: 'ownat', label: 'Ownat' }, { value: 'libra', label: 'Libra' }, { value: 'criadores', label: 'Criadores' }, { value: 'gosbi', label: 'Gosbi' }, { value: 'true_instinct', label: 'True Instinct' }, { value: 'taste_wild', label: 'Taste of the Wild' }, { value: 'farmina', label: 'Farmina N&D' }, { value: 'other', label: 'Outra' }
         ];
 
+        function hideAllSteps() {
+            allStepEls.forEach(function (el) { el.classList.remove('active'); });
+        }
+
+        function showStep(id) {
+            hideAllSteps();
+            document.getElementById(id).classList.add('active');
+        }
+
+        function renderProgress(current, total) {
+            var progressEl = document.getElementById('setupProgress');
+            var html = '';
+            for (var i = 1; i <= total; i++) {
+                var cls = i < current ? 'done' : (i === current ? 'active' : '');
+                html += '<span class="setup-progress-dot ' + cls + '"></span>';
+            }
+            progressEl.innerHTML = html;
+        }
+
+        function renderIngredientGrid() {
+            var gridEl = document.getElementById('setupIngredientGrid');
+            gridEl.innerHTML = INGREDIENT_POOL.map(function (ing) {
+                var sel = selectedIngredients.indexOf(ing.id) !== -1 ? ' selected' : '';
+                return '<div class="setup-ing-card' + sel + '" data-ing="' + ing.id + '">' +
+                    '<span class="setup-ing-card-icon">' + ing.icon + '</span>' +
+                    '<span>' + escapeHtml(ing.name) + '</span>' +
+                    '</div>';
+            }).join('');
+
+            gridEl.querySelectorAll('.setup-ing-card').forEach(function (card) {
+                card.addEventListener('click', function () {
+                    var id = card.getAttribute('data-ing');
+                    var idx = selectedIngredients.indexOf(id);
+                    if (idx !== -1) {
+                        selectedIngredients.splice(idx, 1);
+                        card.classList.remove('selected');
+                    } else {
+                        selectedIngredients.push(id);
+                        card.classList.add('selected');
+                    }
+                });
+            });
+        }
+
         function renderWizardRecipe() {
+            // Build recipe from selected ingredients
+            wizardRecipe = selectedIngredients.map(function (id) {
+                var ing = getIngredient(id);
+                var defaultAmt = ing.unit === 'un' ? 1 : (ing.unit === 'ml' ? 5 : 50);
+                return { id: id, amount: defaultAmt };
+            });
+
             var listEl = document.getElementById('setupRecipeList');
-            listEl.innerHTML = defaultRecipe.map(function (item, idx) {
+            listEl.innerHTML = wizardRecipe.map(function (item, idx) {
                 var ing = getIngredient(item.id);
                 return '<div class="recipe-ingredient-row">' +
                     '<span class="recipe-ing-icon">' + ing.icon + '</span>' +
@@ -429,77 +476,140 @@
             listEl.querySelectorAll('.recipe-ing-amount').forEach(function (input) {
                 input.addEventListener('change', function () {
                     var i = parseInt(input.getAttribute('data-idx'), 10);
-                    defaultRecipe[i].amount = parseFloat(input.value) || 0;
+                    wizardRecipe[i].amount = parseFloat(input.value) || 0;
                 });
             });
-        }
-
-        function setStep(s) {
-            step = s;
-            document.getElementById('setupStep1').classList.toggle('active', s === 1);
-            document.getElementById('setupStep2').classList.toggle('active', s === 2);
-            dots[0].className = 'setup-progress-dot ' + (s === 1 ? 'active' : 'done');
-            dots[1].className = 'setup-progress-dot ' + (s === 2 ? 'active' : '');
         }
 
         function setWizardMode(mode) {
             wizardMode = mode;
             document.getElementById('setupModeHomemade').classList.toggle('active', mode === 'homemade');
             document.getElementById('setupModeKibble').classList.toggle('active', mode === 'kibble');
-            document.getElementById('setupHomemadeConfig').style.display = mode === 'homemade' ? '' : 'none';
-            document.getElementById('setupKibbleConfig').style.display = mode === 'kibble' ? '' : 'none';
         }
 
         function closeWizard() {
             overlay.style.display = 'none';
         }
 
-        function saveWizardSettings() {
+        function saveHomemade() {
+            var finalRecipe = wizardRecipe.filter(function (r) { return r.amount > 0; });
+            var initialStock = parseInt(document.getElementById('setupHomemadeStock').value, 10) || 0;
+
             var settingsUpdate = {
                 alertThreshold: 5,
                 telegramToken: '',
                 telegramChatId: '',
-                feedingMode: wizardMode
+                feedingMode: 'homemade',
+                recipe: finalRecipe,
+                kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2, bagSize: 12 }
             };
 
-            if (wizardMode === 'homemade') {
-                settingsUpdate.recipe = defaultRecipe.filter(function (r) { return r.amount > 0; });
-                settingsUpdate.kibble = { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2, bagSize: 12 };
-            } else {
-                settingsUpdate.recipe = [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
-                settingsUpdate.kibble = {
-                    brand: document.getElementById('setupKibbleBrand').value || '',
-                    lifeStage: '',
-                    protein: '',
-                    special: '',
-                    amount: parseInt(document.getElementById('setupKibbleAmount').value, 10) || 150,
-                    mealsPerDay: parseInt(document.getElementById('setupKibbleMeals').value, 10) || 2,
-                    bagSize: parseFloat(document.getElementById('setupKibbleBagSize').value) || 12
-                };
+            var updates = {};
+            updates['dogs/' + dogId + '/settings'] = settingsUpdate;
+            if (initialStock > 0) {
+                updates['dogs/' + dogId + '/state'] = { stock: initialStock, lastProcessed: Date.now() };
             }
+            db.ref().update(updates).then(function () {
+                if (initialStock > 0) {
+                    state.stock = initialStock;
+                    state.lastProcessed = Date.now();
+                    addHistoryEntry('production', initialStock, 'Stock inicial: ' + initialStock + ' refeições');
+                    render();
+                }
+            });
 
-            db.ref('dogs/' + dogId + '/settings').set(settingsUpdate);
             closeWizard();
             showToast('Alimentação configurada!');
         }
 
-        // Bind events (use cloned to remove old listeners)
+        function saveKibble() {
+            var amount = parseInt(document.getElementById('setupKibbleAmount').value, 10) || 150;
+            var mealsPerDay = parseInt(document.getElementById('setupKibbleMeals').value, 10) || 2;
+            var bagSize = parseFloat(document.getElementById('setupKibbleBagSize').value) || 12;
+            var currentKg = parseFloat(document.getElementById('setupKibbleCurrentKg').value) || 0;
+            var mealsFromStock = currentKg > 0 ? Math.floor((currentKg * 1000) / amount) : 0;
+
+            var settingsUpdate = {
+                alertThreshold: 5,
+                telegramToken: '',
+                telegramChatId: '',
+                feedingMode: 'kibble',
+                recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }],
+                kibble: {
+                    brand: document.getElementById('setupKibbleBrand').value || '',
+                    lifeStage: '',
+                    protein: '',
+                    special: '',
+                    amount: amount,
+                    mealsPerDay: mealsPerDay,
+                    bagSize: bagSize
+                }
+            };
+
+            var updates = {};
+            updates['dogs/' + dogId + '/settings'] = settingsUpdate;
+            if (mealsFromStock > 0) {
+                updates['dogs/' + dogId + '/state'] = { stock: mealsFromStock, lastProcessed: Date.now() };
+            }
+            db.ref().update(updates).then(function () {
+                if (mealsFromStock > 0) {
+                    state.stock = mealsFromStock;
+                    state.lastProcessed = Date.now();
+                    addHistoryEntry('production', mealsFromStock, 'Stock inicial: ' + currentKg + 'kg (' + mealsFromStock + ' refeições)');
+                    render();
+                }
+            });
+
+            closeWizard();
+            showToast('Alimentação configurada!');
+        }
+
+        // Bind events
         document.getElementById('setupModeHomemade').onclick = function () { setWizardMode('homemade'); };
         document.getElementById('setupModeKibble').onclick = function () { setWizardMode('kibble'); };
         document.getElementById('setupSkip').onclick = closeWizard;
-        document.getElementById('setupNext1').onclick = function () {
-            setStep(2);
-            if (wizardMode === 'homemade') renderWizardRecipe();
-        };
-        document.getElementById('setupBack2').onclick = function () { setStep(1); };
-        document.getElementById('setupFinish').onclick = saveWizardSettings;
 
-        // Kibble brand dropdown in wizard
+        document.getElementById('setupNext1').onclick = function () {
+            if (wizardMode === 'homemade') {
+                renderProgress(2, 3);
+                renderIngredientGrid();
+                showStep('setupStep2Ingredients');
+            } else {
+                renderProgress(2, 2);
+                showStep('setupStep2Kibble');
+            }
+        };
+
+        // Homemade flow
+        document.getElementById('setupBackIng').onclick = function () {
+            renderProgress(1, 3);
+            showStep('setupStep1');
+        };
+        document.getElementById('setupNextIng').onclick = function () {
+            if (selectedIngredients.length === 0) {
+                showToast('Selecciona pelo menos um ingrediente');
+                return;
+            }
+            renderProgress(3, 3);
+            renderWizardRecipe();
+            showStep('setupStep3Amounts');
+        };
+        document.getElementById('setupBackAmounts').onclick = function () {
+            renderProgress(2, 3);
+            showStep('setupStep2Ingredients');
+        };
+        document.getElementById('setupFinishHomemade').onclick = saveHomemade;
+
+        // Kibble flow
+        document.getElementById('setupBackKibble').onclick = function () {
+            renderProgress(1, 2);
+            showStep('setupStep1');
+        };
+        document.getElementById('setupFinishKibble').onclick = saveKibble;
+
+        // Kibble brand dropdown
         document.getElementById('setupKibbleBrandBtn').onclick = function () {
-            var KIBBLE_BRANDS = [
-                { value: 'royal_canin', label: 'Royal Canin' }, { value: 'purina_proplan', label: 'Purina Pro Plan' }, { value: 'hills', label: "Hill's Science Plan" }, { value: 'eukanuba', label: 'Eukanuba' }, { value: 'advance', label: 'Advance (Affinity)' }, { value: 'acana', label: 'Acana' }, { value: 'orijen', label: 'Orijen' }, { value: 'brit_care', label: 'Brit Care' }, { value: 'brit_premium', label: 'Brit Premium' }, { value: 'ownat', label: 'Ownat' }, { value: 'libra', label: 'Libra' }, { value: 'criadores', label: 'Criadores' }, { value: 'gosbi', label: 'Gosbi' }, { value: 'true_instinct', label: 'True Instinct' }, { value: 'taste_wild', label: 'Taste of the Wild' }, { value: 'farmina', label: 'Farmina N&D' }, { value: 'other', label: 'Outra' }
-            ];
-            showDropdown('Marca de Ração', KIBBLE_BRANDS, document.getElementById('setupKibbleBrand').value, function (value, label) {
+            showDropdown('Marca de Ração', WIZARD_KIBBLE_BRANDS, document.getElementById('setupKibbleBrand').value, function (value, label) {
                 document.getElementById('setupKibbleBrand').value = value;
                 document.getElementById('setupKibbleBrandBtn').textContent = label;
                 document.getElementById('setupKibbleBrandBtn').classList.add('has-value');
@@ -508,7 +618,8 @@
 
         // Init
         setWizardMode('homemade');
-        setStep(1);
+        renderProgress(1, 2);
+        showStep('setupStep1');
     }
 
     function handleJoinDog() {

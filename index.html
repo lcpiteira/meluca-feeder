@@ -392,12 +392,9 @@
         <div class="setup-wizard">
             <div class="setup-wizard-header">
                 <h2>🐶 Configuração rápida</h2>
-                <p>Configura a alimentação em 2 passos</p>
+                <p id="setupSubtitle">Configura a alimentação</p>
             </div>
-            <div class="setup-progress" id="setupProgress">
-                <span class="setup-progress-dot active"></span>
-                <span class="setup-progress-dot"></span>
-            </div>
+            <div class="setup-progress" id="setupProgress"></div>
 
             <!-- Step 1: Feeding mode -->
             <div class="setup-step active" id="setupStep1">
@@ -412,40 +409,67 @@
                 </div>
             </div>
 
-            <!-- Step 2: Recipe (homemade) or Kibble config -->
-            <div class="setup-step" id="setupStep2">
-                <!-- Homemade sub-step -->
-                <div id="setupHomemadeConfig">
-                    <h3>Receita por refeição</h3>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">Podes ajustar as quantidades nas configurações a qualquer momento.</p>
-                    <div id="setupRecipeList" class="recipe-ingredients-list"></div>
+            <!-- Step 2 Homemade: Select ingredients -->
+            <div class="setup-step" id="setupStep2Ingredients">
+                <h3>Selecciona os ingredientes</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">Escolhe os ingredientes que usas na receita do teu cão.</p>
+                <div class="setup-ingredient-grid" id="setupIngredientGrid"></div>
+                <div class="setup-step-actions">
+                    <button class="btn btn-secondary" id="setupBackIng">← Voltar</button>
+                    <button class="btn btn-primary" id="setupNextIng">Seguinte →</button>
                 </div>
-                <!-- Kibble sub-step -->
-                <div id="setupKibbleConfig" style="display: none;">
-                    <h3>Configuração da ração</h3>
-                    <div class="settings-form">
-                        <div class="setting-group">
-                            <label>Marca:</label>
-                            <button class="custom-dropdown-btn" id="setupKibbleBrandBtn">Seleccionar marca</button>
-                            <input type="hidden" id="setupKibbleBrand">
-                        </div>
-                        <div class="setting-group">
-                            <label>Gramas por refeição:</label>
-                            <input type="number" id="setupKibbleAmount" min="1" step="5" value="150" class="vet-input">
-                        </div>
-                        <div class="setting-group">
-                            <label>Refeições por dia:</label>
-                            <input type="number" id="setupKibbleMeals" min="1" max="6" step="1" value="2" class="vet-input">
-                        </div>
-                        <div class="setting-group">
-                            <label>Tamanho da saca (kg):</label>
-                            <input type="number" id="setupKibbleBagSize" min="0.5" step="0.5" value="12" class="vet-input">
-                        </div>
+            </div>
+
+            <!-- Step 3 Homemade: Amounts + stock -->
+            <div class="setup-step" id="setupStep3Amounts">
+                <h3>Quantidades por refeição</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 14px;">Define o peso de cada ingrediente por refeição.</p>
+                <div id="setupRecipeList" class="recipe-ingredients-list"></div>
+                <div class="setup-stock-section">
+                    <h3>Stock actual</h3>
+                    <div class="setting-group">
+                        <label>Quantas refeições tens preparadas?</label>
+                        <input type="number" id="setupHomemadeStock" min="0" step="1" value="0" class="vet-input">
                     </div>
                 </div>
                 <div class="setup-step-actions">
-                    <button class="btn btn-secondary" id="setupBack2">← Voltar</button>
-                    <button class="btn btn-primary" id="setupFinish">Concluir ✓</button>
+                    <button class="btn btn-secondary" id="setupBackAmounts">← Voltar</button>
+                    <button class="btn btn-primary" id="setupFinishHomemade">Concluir ✓</button>
+                </div>
+            </div>
+
+            <!-- Step 2 Kibble: Config + stock -->
+            <div class="setup-step" id="setupStep2Kibble">
+                <h3>Configuração da ração</h3>
+                <div class="settings-form">
+                    <div class="setting-group">
+                        <label>Marca:</label>
+                        <button class="custom-dropdown-btn" id="setupKibbleBrandBtn">Seleccionar marca</button>
+                        <input type="hidden" id="setupKibbleBrand">
+                    </div>
+                    <div class="setting-group">
+                        <label>Gramas por refeição:</label>
+                        <input type="number" id="setupKibbleAmount" min="1" step="5" value="150" class="vet-input">
+                    </div>
+                    <div class="setting-group">
+                        <label>Refeições por dia:</label>
+                        <input type="number" id="setupKibbleMeals" min="1" max="6" step="1" value="2" class="vet-input">
+                    </div>
+                    <div class="setting-group">
+                        <label>Tamanho da saca (kg):</label>
+                        <input type="number" id="setupKibbleBagSize" min="0.5" step="0.5" value="12" class="vet-input">
+                    </div>
+                </div>
+                <div class="setup-stock-section">
+                    <h3>Stock actual</h3>
+                    <div class="setting-group">
+                        <label>Ração disponível neste momento (kg):</label>
+                        <input type="number" id="setupKibbleCurrentKg" min="0" step="0.1" value="0" class="vet-input">
+                    </div>
+                </div>
+                <div class="setup-step-actions">
+                    <button class="btn btn-secondary" id="setupBackKibble">← Voltar</button>
+                    <button class="btn btn-primary" id="setupFinishKibble">Concluir ✓</button>
                 </div>
             </div>
         </div>

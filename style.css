@@ -2412,6 +2412,63 @@ footer {
     background: var(--success);
 }
 
+/* Setup Wizard: Ingredient Grid */
+.setup-ingredient-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.setup-ing-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 6px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+}
+
+.setup-ing-card:hover {
+    border-color: var(--primary);
+}
+
+.setup-ing-card.selected {
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.setup-ing-card-icon {
+    font-size: 1.4rem;
+}
+
+/* Setup stock section */
+.setup-stock-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.setup-stock-section h3 {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    text-align: center;
+    color: var(--text-light);
+}
+
 /* Prep CTA (empty recipe) */
 .prep-cta {
     background: var(--card);
