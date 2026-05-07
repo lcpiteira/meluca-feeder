@@ -3,6 +3,39 @@
 
     const SETTINGS_KEY = 'melucafeeder_settings';
 
+    var INGREDIENT_POOL = [
+        { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
+        { id: 'turkey', name: 'Peru', icon: '🦃', unit: 'g' },
+        { id: 'beef', name: 'Vaca', icon: '🥩', unit: 'g' },
+        { id: 'pork', name: 'Porco', icon: '🥓', unit: 'g' },
+        { id: 'fish', name: 'Peixe', icon: '🐟', unit: 'g' },
+        { id: 'liver', name: 'Fígado', icon: '🫀', unit: 'g' },
+        { id: 'tripe', name: 'Dobrada', icon: '🫘', unit: 'g' },
+        { id: 'rice', name: 'Arroz', icon: '🍚', unit: 'g' },
+        { id: 'pasta', name: 'Massa', icon: '🍝', unit: 'g' },
+        { id: 'oats', name: 'Aveia', icon: '🌾', unit: 'g' },
+        { id: 'sweet_potato', name: 'Batata-doce', icon: '🍠', unit: 'g' },
+        { id: 'potato', name: 'Batata', icon: '🥔', unit: 'g' },
+        { id: 'peas', name: 'Ervilhas', icon: '🫛', unit: 'g' },
+        { id: 'carrot', name: 'Cenoura', icon: '🥕', unit: 'g' },
+        { id: 'broccoli', name: 'Brócolos', icon: '🥦', unit: 'g' },
+        { id: 'spinach', name: 'Espinafres', icon: '🥬', unit: 'g' },
+        { id: 'pumpkin', name: 'Abóbora', icon: '🎃', unit: 'g' },
+        { id: 'zucchini', name: 'Courgette', icon: '🥒', unit: 'g' },
+        { id: 'green_beans', name: 'Feijão verde', icon: '🫘', unit: 'g' },
+        { id: 'apple', name: 'Maçã', icon: '🍎', unit: 'g' },
+        { id: 'banana', name: 'Banana', icon: '🍌', unit: 'g' },
+        { id: 'blueberry', name: 'Mirtilo', icon: '🫐', unit: 'g' },
+        { id: 'egg', name: 'Ovo', icon: '🥚', unit: 'un' },
+        { id: 'oil', name: 'Azeite', icon: '🫒', unit: 'ml' },
+        { id: 'coconut_oil', name: 'Óleo de coco', icon: '🥥', unit: 'ml' },
+        { id: 'supplement', name: 'Suplemento', icon: '💊', unit: 'g' },
+        { id: 'yogurt', name: 'Iogurte natural', icon: '🥛', unit: 'g' },
+        { id: 'cheese', name: 'Queijo fresco', icon: '🧀', unit: 'g' }
+    ];
+
+    var currentRecipe = [];
+
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
         authDomain: "melucafeeder.firebaseapp.com",
@@ -55,10 +88,8 @@
     const alertThresholdEl = document.getElementById('alertThreshold');
     const telegramTokenEl = document.getElementById('telegramToken');
     const telegramChatIdEl = document.getElementById('telegramChatId');
-    const recipeChickenEl = document.getElementById('recipeChicken');
-    const recipeRiceEl = document.getElementById('recipeRice');
-    const recipePeasEl = document.getElementById('recipePeas');
-    const recipeEggEl = document.getElementById('recipeEgg');
+    const recipeIngredientsEl = document.getElementById('recipeIngredients');
+    const addIngredientBtnEl = document.getElementById('addIngredientBtn');
     const targetWeightEl = document.getElementById('targetWeight');
 
     // Wait for auth state
@@ -114,12 +145,59 @@
         alertThresholdEl.value = s.alertThreshold || 5;
         telegramTokenEl.value = s.telegramToken || '';
         telegramChatIdEl.value = s.telegramChatId || '';
-        var recipe = s.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
-        recipeChickenEl.value = recipe.chicken;
-        recipeRiceEl.value = recipe.rice;
-        recipePeasEl.value = recipe.peas;
-        recipeEggEl.value = recipe.egg;
+        currentRecipe = migrateRecipe(s.recipe);
+        renderRecipeIngredients();
         targetWeightEl.value = s.targetWeight || '';
+    }
+
+    function migrateRecipe(recipe) {
+        if (Array.isArray(recipe)) return recipe.slice();
+        if (!recipe || typeof recipe !== 'object') return [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
+        var arr = [];
+        Object.keys(recipe).forEach(function (key) {
+            if (recipe[key] > 0) arr.push({ id: key, amount: recipe[key] });
+        });
+        return arr.length > 0 ? arr : [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
+    }
+
+    function getIngredient(id) {
+        for (var i = 0; i < INGREDIENT_POOL.length; i++) {
+            if (INGREDIENT_POOL[i].id === id) return INGREDIENT_POOL[i];
+        }
+        return { id: id, name: id, icon: '📦', unit: 'g' };
+    }
+
+    function renderRecipeIngredients() {
+        if (currentRecipe.length === 0) {
+            recipeIngredientsEl.innerHTML = '<p class="empty-history">Sem ingredientes. Adiciona pelo menos um.</p>';
+            return;
+        }
+        recipeIngredientsEl.innerHTML = currentRecipe.map(function (item, idx) {
+            var ing = getIngredient(item.id);
+            var step = ing.unit === 'un' ? '0.5' : (ing.unit === 'ml' ? '1' : '5');
+            return '<div class="recipe-ingredient-row">' +
+                '<span class="recipe-ing-icon">' + ing.icon + '</span>' +
+                '<span class="recipe-ing-name">' + escapeHtml(ing.name) + '</span>' +
+                '<input type="number" class="recipe-ing-amount" data-idx="' + idx + '" min="0" step="' + step + '" value="' + item.amount + '">' +
+                '<span class="recipe-ing-unit">' + ing.unit + '</span>' +
+                '<button class="recipe-ing-remove" data-idx="' + idx + '">✕</button>' +
+                '</div>';
+        }).join('');
+
+        recipeIngredientsEl.querySelectorAll('.recipe-ing-amount').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var i = parseInt(input.getAttribute('data-idx'), 10);
+                currentRecipe[i].amount = parseFloat(input.value) || 0;
+            });
+        });
+
+        recipeIngredientsEl.querySelectorAll('.recipe-ing-remove').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var i = parseInt(btn.getAttribute('data-idx'), 10);
+                currentRecipe.splice(i, 1);
+                renderRecipeIngredients();
+            });
+        });
     }
 
     function populateProfile(name, p) {
@@ -178,12 +256,7 @@
             alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
             telegramToken: telegramTokenEl.value.trim(),
             telegramChatId: telegramChatIdEl.value.trim(),
-            recipe: {
-                chicken: parseFloat(recipeChickenEl.value) || 0,
-                rice: parseFloat(recipeRiceEl.value) || 0,
-                peas: parseFloat(recipePeasEl.value) || 0,
-                egg: parseFloat(recipeEggEl.value) || 0
-            },
+            recipe: currentRecipe.filter(function (item) { return item.amount > 0; }),
             targetWeight: parseFloat(targetWeightEl.value) || null
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -627,6 +700,22 @@
     generateInviteBtn.addEventListener('click', handleGenerateInvite);
     generateShareBtn.addEventListener('click', handleGenerateShare);
     copyShareLinkBtn.addEventListener('click', handleCopyShareLink);
+
+    addIngredientBtnEl.addEventListener('click', function () {
+        var usedIds = currentRecipe.map(function (item) { return item.id; });
+        var available = INGREDIENT_POOL.filter(function (ing) { return usedIds.indexOf(ing.id) === -1; });
+        if (available.length === 0) {
+            showToast('Todos os ingredientes já foram adicionados');
+            return;
+        }
+        var options = available.map(function (ing) { return { value: ing.id, label: ing.icon + ' ' + ing.name }; });
+        showDropdown('Adicionar ingrediente', options, '', function (value) {
+            var ing = getIngredient(value);
+            var defaultAmount = ing.unit === 'un' ? 1 : (ing.unit === 'ml' ? 5 : 50);
+            currentRecipe.push({ id: value, amount: defaultAmount });
+            renderRecipeIngredients();
+        });
+    });
 
     profileBirthdayBtnEl.addEventListener('click', function () {
         var initDate = profileBirthdayEl.value || null;

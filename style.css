@@ -960,6 +960,100 @@ section h2 {
     width: 100%;
 }
 
+/* Recipe ingredient rows (settings) */
+.recipe-ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.recipe-ingredient-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+}
+
+.recipe-ing-icon {
+    font-size: 1.2rem;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.recipe-ing-name {
+    flex: 1;
+    font-size: 0.85rem;
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.recipe-ing-amount {
+    width: 70px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    text-align: center;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    flex-shrink: 0;
+}
+
+.recipe-ing-amount:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.recipe-ing-unit {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    width: 20px;
+    flex-shrink: 0;
+}
+
+.recipe-ing-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.recipe-ing-remove:hover {
+    color: var(--danger);
+    background: var(--danger-light);
+}
+
+.recipe-add-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--primary);
+    padding: 10px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.recipe-add-btn:hover {
+    border-color: var(--primary);
+    background: var(--primary-glow);
+}
+
 .calc-result {
     margin-top: 16px;
     text-align: center;

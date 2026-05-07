@@ -100,24 +100,9 @@
 
         <section class="settings-section" id="recipePanel" style="display: none;">
             <h2>Receita (por refeição)</h2>
-            <div class="settings-form">
-                <div class="setting-group">
-                    <label>Frango (g):</label>
-                    <input type="number" id="recipeChicken" min="0" value="50" step="5">
-                </div>
-                <div class="setting-group">
-                    <label>Arroz (g):</label>
-                    <input type="number" id="recipeRice" min="0" value="50" step="5">
-                </div>
-                <div class="setting-group">
-                    <label>Ervilhas (g):</label>
-                    <input type="number" id="recipePeas" min="0" value="25" step="5">
-                </div>
-                <div class="setting-group">
-                    <label>Ovo (unidades):</label>
-                    <input type="number" id="recipeEgg" min="0" value="0.5" step="0.5">
-                </div>
-            </div>
+            <p class="section-desc">Define os ingredientes e quantidades por refeição.</p>
+            <div id="recipeIngredients" class="recipe-ingredients-list"></div>
+            <button id="addIngredientBtn" class="btn btn-outline recipe-add-btn">+ Adicionar ingrediente</button>
         </section>
 
         <section class="settings-section" id="weightPanel" style="display: none;">

@@ -18,6 +18,37 @@
     const EVENING_HOUR = 21;
     const MAX_AUTO_DEDUCTIONS = 4;
 
+    var INGREDIENT_POOL = [
+        { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
+        { id: 'turkey', name: 'Peru', icon: '🦃', unit: 'g' },
+        { id: 'beef', name: 'Vaca', icon: '🥩', unit: 'g' },
+        { id: 'pork', name: 'Porco', icon: '🥓', unit: 'g' },
+        { id: 'fish', name: 'Peixe', icon: '🐟', unit: 'g' },
+        { id: 'liver', name: 'Fígado', icon: '🫀', unit: 'g' },
+        { id: 'tripe', name: 'Dobrada', icon: '🫘', unit: 'g' },
+        { id: 'rice', name: 'Arroz', icon: '🍚', unit: 'g' },
+        { id: 'pasta', name: 'Massa', icon: '🍝', unit: 'g' },
+        { id: 'oats', name: 'Aveia', icon: '🌾', unit: 'g' },
+        { id: 'sweet_potato', name: 'Batata-doce', icon: '🍠', unit: 'g' },
+        { id: 'potato', name: 'Batata', icon: '🥔', unit: 'g' },
+        { id: 'peas', name: 'Ervilhas', icon: '🫛', unit: 'g' },
+        { id: 'carrot', name: 'Cenoura', icon: '🥕', unit: 'g' },
+        { id: 'broccoli', name: 'Brócolos', icon: '🥦', unit: 'g' },
+        { id: 'spinach', name: 'Espinafres', icon: '🥬', unit: 'g' },
+        { id: 'pumpkin', name: 'Abóbora', icon: '🎃', unit: 'g' },
+        { id: 'zucchini', name: 'Courgette', icon: '🥒', unit: 'g' },
+        { id: 'green_beans', name: 'Feijão verde', icon: '🫘', unit: 'g' },
+        { id: 'apple', name: 'Maçã', icon: '🍎', unit: 'g' },
+        { id: 'banana', name: 'Banana', icon: '🍌', unit: 'g' },
+        { id: 'blueberry', name: 'Mirtilo', icon: '🫐', unit: 'g' },
+        { id: 'egg', name: 'Ovo', icon: '🥚', unit: 'un' },
+        { id: 'oil', name: 'Azeite', icon: '🫒', unit: 'ml' },
+        { id: 'coconut_oil', name: 'Óleo de coco', icon: '🥥', unit: 'ml' },
+        { id: 'supplement', name: 'Suplemento', icon: '💊', unit: 'g' },
+        { id: 'yogurt', name: 'Iogurte natural', icon: '🥛', unit: 'g' },
+        { id: 'cheese', name: 'Queijo fresco', icon: '🧀', unit: 'g' }
+    ];
+
     // === State ===
     let state = { stock: 0, lastProcessed: 0 };
     let settings = loadLocalSettings();
@@ -76,10 +107,7 @@
     const lastUpdateEl = document.getElementById('lastUpdate');
     const toastEl = document.getElementById('toast');
     const syncStatusEl = document.getElementById('syncStatus');
-    const calcChickenEl = document.getElementById('calcChicken');
-    const calcRiceEl = document.getElementById('calcRice');
-    const calcPeasEl = document.getElementById('calcPeas');
-    const calcEggsEl = document.getElementById('calcEggs');
+    const calcIngredientsEl = document.getElementById('calcIngredients');
     const calcBtnEl = document.getElementById('calcBtn');
     const calcResultEl = document.getElementById('calcResult');
     const calcResultNumberEl = document.getElementById('calcResultNumber');
@@ -321,7 +349,7 @@
         updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
         updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
         updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
-        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
+        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }] };
         updates['users/' + currentUser.uid + '/dogs/' + dogId] = true;
 
         db.ref().update(updates).then(function () {
@@ -760,6 +788,7 @@
             if (cloudSettings) {
                 settings = cloudSettings;
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+                renderCalcIngredients();
             }
         });
         listeners.push({ ref: settingsRef, event: 'value' });
@@ -821,7 +850,41 @@
             var raw = localStorage.getItem(SETTINGS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: { chicken: 50, rice: 50, peas: 25, egg: 0.5 } };
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }] };
+    }
+
+    function migrateRecipe(recipe) {
+        if (Array.isArray(recipe)) return recipe;
+        if (!recipe || typeof recipe !== 'object') return [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
+        var arr = [];
+        Object.keys(recipe).forEach(function (key) {
+            if (recipe[key] > 0) arr.push({ id: key, amount: recipe[key] });
+        });
+        return arr.length > 0 ? arr : [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
+    }
+
+    function getIngredient(id) {
+        for (var i = 0; i < INGREDIENT_POOL.length; i++) {
+            if (INGREDIENT_POOL[i].id === id) return INGREDIENT_POOL[i];
+        }
+        return { id: id, name: id, icon: '📦', unit: 'g' };
+    }
+
+    function renderCalcIngredients() {
+        var recipe = migrateRecipe(settings.recipe);
+        if (recipe.length === 0) {
+            calcIngredientsEl.innerHTML = '<p class="empty-history">Sem ingredientes na receita. Configura a receita nas definições do cão.</p>';
+            return;
+        }
+        calcIngredientsEl.innerHTML = recipe.map(function (item) {
+            var ing = getIngredient(item.id);
+            var step = ing.unit === 'un' ? '1' : (ing.unit === 'ml' ? '1' : '10');
+            return '<div class="calc-row">' +
+                '<span class="calc-icon">' + ing.icon + '</span>' +
+                '<label>' + escapeHtml(ing.name) + ' (' + ing.unit + ')</label>' +
+                '<input type="number" data-ingredient="' + item.id + '" min="0" value="0" step="' + step + '" class="calc-input">' +
+                '</div>';
+        }).join('');
     }
 
     // === Firebase Write ===
@@ -1181,8 +1244,9 @@
             });
         });
 
-        // Init calendar + vet date
+        // Init calendar + vet date + calc ingredients
         renderCalendar();
+        renderCalcIngredients();
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
@@ -1191,35 +1255,20 @@
 
     // === Handlers ===
     function handleCalculate() {
-        var recipe = settings.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
-        var chicken = parseFloat(calcChickenEl.value) || 0;
-        var rice = parseFloat(calcRiceEl.value) || 0;
-        var peas = parseFloat(calcPeasEl.value) || 0;
-        var eggs = parseFloat(calcEggsEl.value) || 0;
-
+        var recipe = migrateRecipe(settings.recipe);
         var meals = [];
         var details = [];
 
-        if (recipe.chicken > 0 && chicken > 0) {
-            var m = Math.floor(chicken / recipe.chicken);
-            meals.push(m);
-            details.push('Frango: ' + m + ' refeições (' + recipe.chicken + 'g/ref)');
-        }
-        if (recipe.rice > 0 && rice > 0) {
-            var m2 = Math.floor(rice / recipe.rice);
-            meals.push(m2);
-            details.push('Arroz: ' + m2 + ' refeições (' + recipe.rice + 'g/ref)');
-        }
-        if (recipe.peas > 0 && peas > 0) {
-            var m3 = Math.floor(peas / recipe.peas);
-            meals.push(m3);
-            details.push('Ervilhas: ' + m3 + ' refeições (' + recipe.peas + 'g/ref)');
-        }
-        if (recipe.egg > 0 && eggs > 0) {
-            var m4 = Math.floor(eggs / recipe.egg);
-            meals.push(m4);
-            details.push('Ovos: ' + m4 + ' refeições (' + recipe.egg + ' un/ref)');
-        }
+        recipe.forEach(function (item) {
+            var ing = getIngredient(item.id);
+            var inputEl = calcIngredientsEl.querySelector('[data-ingredient="' + item.id + '"]');
+            var available = inputEl ? parseFloat(inputEl.value) || 0 : 0;
+            if (item.amount > 0 && available > 0) {
+                var m = Math.floor(available / item.amount);
+                meals.push(m);
+                details.push(ing.icon + ' ' + ing.name + ': ' + m + ' refeições (' + item.amount + ' ' + ing.unit + '/ref)');
+            }
+        });
 
         if (meals.length === 0) {
             showToast('Introduz pelo menos um ingrediente');
@@ -1279,24 +1328,23 @@
             return;
         }
 
-        var recipe = settings.recipe || { chicken: 50, rice: 50, peas: 25, egg: 0.5 };
+        var recipe = migrateRecipe(settings.recipe);
         var items = [];
-        if (recipe.chicken > 0) {
-            var totalChicken = recipe.chicken * target;
-            items.push({ name: 'Frango', display: totalChicken >= 1000 ? (totalChicken / 1000).toFixed(1) + ' kg' : totalChicken + ' g' });
-        }
-        if (recipe.rice > 0) {
-            var totalRice = recipe.rice * target;
-            items.push({ name: 'Arroz', display: totalRice >= 1000 ? (totalRice / 1000).toFixed(1) + ' kg' : totalRice + ' g' });
-        }
-        if (recipe.peas > 0) {
-            var totalPeas = recipe.peas * target;
-            items.push({ name: 'Ervilhas', display: totalPeas >= 1000 ? (totalPeas / 1000).toFixed(1) + ' kg' : totalPeas + ' g' });
-        }
-        if (recipe.egg > 0) {
-            var totalEggs = Math.ceil(recipe.egg * target);
-            items.push({ name: 'Ovos', display: totalEggs + ' un' });
-        }
+        recipe.forEach(function (item) {
+            if (item.amount > 0) {
+                var ing = getIngredient(item.id);
+                var total = item.amount * target;
+                var display;
+                if (ing.unit === 'un') {
+                    display = Math.ceil(total) + ' un';
+                } else if (ing.unit === 'ml') {
+                    display = total >= 1000 ? (total / 1000).toFixed(1) + ' L' : total + ' ml';
+                } else {
+                    display = total >= 1000 ? (total / 1000).toFixed(1) + ' kg' : total + ' g';
+                }
+                items.push({ name: ing.icon + ' ' + ing.name, display: display });
+            }
+        });
 
         shoppingListEl.style.display = '';
         shoppingListEl.innerHTML = '<div class="shopping-header">' + target + ' refeições</div>' +
