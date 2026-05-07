@@ -285,33 +285,109 @@ body {
 
 .dog-form-radio-group {
     display: flex;
-    gap: 16px;
+    gap: 8px;
 }
 
 .dog-radio-label {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.85rem;
-    color: var(--text-light);
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.dog-radio-label:hover {
+    border-color: var(--primary);
 }
 
 .dog-radio-label input[type="radio"] {
-    accent-color: var(--primary);
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dog-radio-label.selected {
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    color: var(--text);
+    font-weight: 600;
 }
 
 .dog-checkbox-label {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    color: var(--text-light);
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    width: 100%;
+}
+
+.dog-checkbox-label:hover {
+    border-color: var(--primary);
 }
 
 .dog-checkbox-label input[type="checkbox"] {
-    accent-color: var(--primary);
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.dog-checkbox-label.checked {
+    background: var(--primary-glow);
+    border-color: var(--primary);
+    color: var(--text);
+    font-weight: 600;
+}
+
+.dog-checkbox-label .check-icon {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s, background 0.2s;
+    flex-shrink: 0;
+}
+
+.dog-checkbox-label.checked .check-icon {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.dog-checkbox-label .check-icon::after {
+    content: '';
+    display: none;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-top: -1px;
+}
+
+.dog-checkbox-label.checked .check-icon::after {
+    display: block;
 }
 
 /* Dog card details */

@@ -142,9 +142,21 @@
         }
         profileColorEl.value = p.color || '';
         profileNeuteredEl.checked = !!p.neutered;
+        var neuteredLabel = profileNeuteredEl.closest('.dog-checkbox-label');
+        if (neuteredLabel) {
+            if (p.neutered) neuteredLabel.classList.add('checked');
+            else neuteredLabel.classList.remove('checked');
+        }
         profileChipEl.value = p.chip || '';
         var sexRadios = document.querySelectorAll('input[name="profileSex"]');
-        sexRadios.forEach(function (r) { r.checked = (r.value === p.sex); });
+        sexRadios.forEach(function (r) {
+            r.checked = (r.value === p.sex);
+            var label = r.closest('.dog-radio-label');
+            if (label) {
+                if (r.value === p.sex) label.classList.add('selected');
+                else label.classList.remove('selected');
+            }
+        });
     }
 
     function handleSave() {
@@ -639,5 +651,25 @@
             shareDurationBtnEl.textContent = label;
             shareDurationBtnEl.classList.add('has-value');
         }, { searchable: false });
+    });
+
+    // Radio button toggle (selected class)
+    document.querySelectorAll('.dog-radio-label').forEach(function (label) {
+        label.addEventListener('click', function () {
+            var group = label.closest('.dog-form-radio-group');
+            if (group) group.querySelectorAll('.dog-radio-label').forEach(function (l) { l.classList.remove('selected'); });
+            label.classList.add('selected');
+        });
+    });
+
+    // Checkbox toggle (checked class)
+    document.querySelectorAll('.dog-checkbox-label').forEach(function (label) {
+        label.addEventListener('click', function () {
+            setTimeout(function () {
+                var input = label.querySelector('input[type="checkbox"]');
+                if (input && input.checked) label.classList.add('checked');
+                else label.classList.remove('checked');
+            }, 0);
+        });
     });
 })();

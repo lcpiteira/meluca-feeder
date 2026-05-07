@@ -334,9 +334,13 @@
             newDogBirthdayBtnEl.classList.remove('has-value');
             newDogColorEl.value = '';
             newDogNeuteredEl.checked = false;
+            newDogNeuteredEl.closest('.dog-checkbox-label').classList.remove('checked');
             newDogChipEl.value = '';
             var checked = document.querySelector('input[name="newDogSex"]:checked');
             if (checked) checked.checked = false;
+            document.querySelectorAll('input[name="newDogSex"]').forEach(function (r) {
+                r.closest('.dog-radio-label').classList.remove('selected');
+            });
             showToast(name + ' criado!');
         });
     }
@@ -1142,6 +1146,26 @@
         });
         calPrevEl.addEventListener('click', function () { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderCalendar(); });
         calNextEl.addEventListener('click', function () { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderCalendar(); });
+
+        // Radio button toggle (selected class)
+        document.querySelectorAll('.dog-radio-label').forEach(function (label) {
+            label.addEventListener('click', function () {
+                var group = label.closest('.dog-form-radio-group');
+                if (group) group.querySelectorAll('.dog-radio-label').forEach(function (l) { l.classList.remove('selected'); });
+                label.classList.add('selected');
+            });
+        });
+
+        // Checkbox toggle (checked class)
+        document.querySelectorAll('.dog-checkbox-label').forEach(function (label) {
+            label.addEventListener('click', function () {
+                setTimeout(function () {
+                    var input = label.querySelector('input[type="checkbox"]');
+                    if (input && input.checked) label.classList.add('checked');
+                    else label.classList.remove('checked');
+                }, 0);
+            });
+        });
 
         // Tab navigation
         document.querySelectorAll('.tab').forEach(function (tab) {
