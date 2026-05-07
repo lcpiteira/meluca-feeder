@@ -58,9 +58,17 @@
     }
 
     function loadDogData(dogId) {
-        // Load dog name
-        db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
-            dogNameEl.textContent = '🐶 ' + (snap.val() || 'Cão');
+        // Load dog name + profile (check sex for heat tab)
+        db.ref('dogs/' + dogId).once('value', function (snap) {
+            var dog = snap.val() || {};
+            dogNameEl.textContent = '🐶 ' + (dog.name || 'Cão');
+            var p = dog.profile || {};
+            if (p.sex === 'M') {
+                var heatTab = document.querySelector('.tab[data-tab="heat"]');
+                var heatContent = document.getElementById('tab-heat');
+                if (heatTab) heatTab.style.display = 'none';
+                if (heatContent) heatContent.style.display = 'none';
+            }
         });
 
         // Load state

@@ -443,6 +443,22 @@
             if (p.birthday) parts.push(calcAge(p.birthday));
             var subtitleEl = document.getElementById('appDogSubtitle');
             if (subtitleEl) subtitleEl.textContent = parts.join(' · ');
+
+            // Hide heat tab for male dogs
+            var heatTabBtn = document.querySelector('.tab[data-tab="heat"]');
+            var heatTabContent = document.getElementById('tab-heat');
+            var isMale = p.sex === 'M';
+            if (heatTabBtn) heatTabBtn.style.display = isMale ? 'none' : '';
+            if (heatTabContent && isMale) {
+                heatTabContent.classList.remove('active');
+                // If heat tab was active, switch to dashboard
+                if (heatTabBtn && heatTabBtn.classList.contains('active')) {
+                    heatTabBtn.classList.remove('active');
+                    var dashTab = document.querySelector('.tab[data-tab="dashboard"]');
+                    if (dashTab) dashTab.classList.add('active');
+                    document.getElementById('tab-dashboard').classList.add('active');
+                }
+            }
         });
 
         showApp();
