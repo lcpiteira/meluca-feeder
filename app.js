@@ -400,34 +400,69 @@
     }
 
     function handleDeleteDog(dogId, dogName, role) {
-        if (role === 'owner') {
-            if (!confirm('Tens a certeza que queres eliminar "' + dogName + '"? Todos os dados (histórico, peso, saúde) serão apagados permanentemente.')) return;
+        var message = role === 'owner'
+            ? 'Tens a certeza que queres eliminar "' + dogName + '"? Todos os dados (histórico, peso, saúde) serão apagados permanentemente.'
+            : 'Queres sair de "' + dogName + '"? Deixarás de ter acesso a este cão.';
 
-            // Owner deletes: remove entire dog + remove from all members
-            db.ref('dogs/' + dogId + '/members').once('value', function (snap) {
-                var members = snap.val() || {};
-                var updates = {};
-                updates['dogs/' + dogId] = null;
-                Object.keys(members).forEach(function (uid) {
-                    updates['users/' + uid + '/dogs/' + dogId] = null;
+        showModal(message, function () {
+            if (role === 'owner') {
+                db.ref('dogs/' + dogId + '/members').once('value', function (snap) {
+                    var members = snap.val() || {};
+                    var updates = {};
+                    updates['dogs/' + dogId] = null;
+                    Object.keys(members).forEach(function (uid) {
+                        updates['users/' + uid + '/dogs/' + dogId] = null;
+                    });
+                    db.ref().update(updates).then(function () {
+                        if (currentDogId === dogId) currentDogId = null;
+                        showToast(dogName + ' eliminado');
+                    });
                 });
+            } else {
+                var updates = {};
+                updates['dogs/' + dogId + '/members/' + currentUser.uid] = null;
+                updates['users/' + currentUser.uid + '/dogs/' + dogId] = null;
                 db.ref().update(updates).then(function () {
                     if (currentDogId === dogId) currentDogId = null;
-                    showToast(dogName + ' eliminado');
+                    showToast('Saíste de ' + dogName);
                 });
-            });
-        } else {
-            if (!confirm('Queres sair de "' + dogName + '"? Deixarás de ter acesso a este cão.')) return;
+            }
+        });
+    }
 
-            // Member leaves: just unlink
-            var updates = {};
-            updates['dogs/' + dogId + '/members/' + currentUser.uid] = null;
-            updates['users/' + currentUser.uid + '/dogs/' + dogId] = null;
-            db.ref().update(updates).then(function () {
-                if (currentDogId === dogId) currentDogId = null;
-                showToast('Saíste de ' + dogName);
-            });
+    // === Custom Modal ===
+    function showModal(message, onConfirm) {
+        var overlay = document.getElementById('modalOverlay');
+        var msgEl = document.getElementById('modalMessage');
+        var confirmBtn = document.getElementById('modalConfirm');
+        var cancelBtn = document.getElementById('modalCancel');
+
+        msgEl.textContent = message;
+        overlay.style.display = '';
+
+        function cleanup() {
+            overlay.style.display = 'none';
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            overlay.removeEventListener('click', handleOverlay);
         }
+
+        function handleConfirm() {
+            cleanup();
+            onConfirm();
+        }
+
+        function handleCancel() {
+            cleanup();
+        }
+
+        function handleOverlay(e) {
+            if (e.target === overlay) cleanup();
+        }
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlay);
     }
 
     // === Firebase Listeners (per dog) ===
