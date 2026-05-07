@@ -17,6 +17,8 @@
     const MORNING_HOUR = 8;
     const EVENING_HOUR = 21;
     const MAX_AUTO_DEDUCTIONS = 4;
+    const GEMINI_API_KEY = 'AIzaSyDOsZbgMdjY9gLjG-KIiOSye4lygDURLXU';
+    const GEMINI_MODEL = 'gemini-2.0-flash';
 
     var INGREDIENT_POOL = [
         { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
@@ -178,6 +180,11 @@
     const calNextEl = document.getElementById('calNext');
     const calMonthEl = document.getElementById('calMonth');
     const calendarGridEl = document.getElementById('calendarGrid');
+
+    // === DOM: AI ===
+    const aiResponseEl = document.getElementById('aiResponse');
+    const aiCustomPromptEl = document.getElementById('aiCustomPrompt');
+    const aiAskBtnEl = document.getElementById('aiAskBtn');
 
     // === Firebase Init ===
     function initFirebase() {
@@ -2163,6 +2170,35 @@
         renderCalcIngredients();
         updatePrepMode();
         updateDashboardMode();
+
+        // AI event handlers
+        document.querySelectorAll('.btn-ai-prompt').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var promptKey = btn.getAttribute('data-prompt');
+                var prompt = AI_PROMPTS[promptKey];
+                if (prompt) askGemini(prompt);
+            });
+        });
+
+        if (aiAskBtnEl) {
+            aiAskBtnEl.addEventListener('click', function () {
+                var q = aiCustomPromptEl.value.trim();
+                if (q) {
+                    askGemini(q);
+                    aiCustomPromptEl.value = '';
+                }
+            });
+        }
+
+        if (aiCustomPromptEl) {
+            aiCustomPromptEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    aiAskBtnEl.click();
+                }
+            });
+        }
+
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
@@ -3121,6 +3157,125 @@
         if (now - lastTouchEnd <= 300) e.preventDefault();
         lastTouchEnd = now;
     }, { passive: false });
+
+    // === AI (Gemini) ===
+    function buildDogContext() {
+        var dogName = appDogNameEl ? appDogNameEl.textContent : 'a cadela';
+        var parts = [];
+        parts.push('Nome: ' + dogName);
+
+        if (settings.feedingMode === 'homemade') {
+            parts.push('Alimentação: caseira');
+            if (settings.recipe && settings.recipe.length > 0) {
+                var recipeDesc = settings.recipe.map(function (r) {
+                    var ing = getIngredient(r.id);
+                    return ing.name + ' ' + r.amount + ing.unit;
+                }).join(', ');
+                parts.push('Receita actual: ' + recipeDesc);
+            }
+        } else if (settings.feedingMode === 'kibble') {
+            parts.push('Alimentação: ração');
+            if (settings.kibble) {
+                var k = settings.kibble;
+                if (k.brand) parts.push('Ração: ' + k.brand);
+                if (k.amount) parts.push('Dose diária: ' + k.amount + 'g em ' + (k.mealsPerDay || 2) + ' refeições');
+            }
+        }
+
+        if (weightData.length > 0) {
+            var lastW = weightData[weightData.length - 1];
+            parts.push('Peso actual: ' + lastW.weight + ' kg (' + new Date(lastW.date).toLocaleDateString('pt-PT') + ')');
+            if (weightData.length >= 2) {
+                var recent = weightData.slice(-5);
+                var trend = recent.map(function (w) { return w.weight + 'kg em ' + new Date(w.date).toLocaleDateString('pt-PT'); }).join(', ');
+                parts.push('Últimos pesos: ' + trend);
+            }
+            if (settings.targetWeight) parts.push('Peso alvo: ' + settings.targetWeight + ' kg');
+        }
+
+        if (vetData.length > 0) {
+            var recentVet = vetData.slice(0, 5).map(function (v) {
+                return v.type + (v.desc ? ' (' + v.desc + ')' : '') + ' em ' + new Date(v.date).toLocaleDateString('pt-PT');
+            }).join('; ');
+            parts.push('Registos veterinários recentes: ' + recentVet);
+        }
+
+        if (healthNotes.length > 0) {
+            var recentNotes = healthNotes.slice(0, 5).map(function (n) {
+                return '"' + n.text + '" em ' + new Date(n.date).toLocaleDateString('pt-PT');
+            }).join('; ');
+            parts.push('Notas de saúde recentes: ' + recentNotes);
+        }
+
+        if (heatCycles.length > 0) {
+            var cycles = heatCycles.slice(0, 5).map(function (c) {
+                var start = new Date(c.startDate).toLocaleDateString('pt-PT');
+                var end = c.endDate ? new Date(c.endDate).toLocaleDateString('pt-PT') : 'em curso';
+                return start + ' → ' + end;
+            }).join('; ');
+            parts.push('Ciclos de cio: ' + cycles);
+        }
+
+        parts.push('Stock actual: ' + state.stock + ' refeições');
+        return parts.join('\n');
+    }
+
+    var AI_PROMPTS = {
+        'health-summary': 'Com base nos dados desta cadela, faz um resumo de saúde conciso. Inclui tendências de peso, estado de vacinação/desparasitação, e quaisquer alertas ou padrões relevantes nas notas de saúde.',
+        'weight-analysis': 'Analisa a evolução do peso desta cadela. Identifica tendências (ganho, perda, estabilidade), compara com o peso alvo se existir, e sugere acções se necessário.',
+        'feeding-tips': 'Com base na alimentação actual, peso, e estado de saúde desta cadela, sugere ajustes ou melhorias na dieta. Sê prático e específico.',
+        'heat-prediction': 'Com base no histórico de ciclos de cio desta cadela, analisa a regularidade dos ciclos, prevê a data aproximada do próximo cio, e dá dicas de preparação.'
+    };
+
+    function askGemini(userPrompt) {
+        if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
+            aiResponseEl.innerHTML = '<p style="color: var(--danger);">⚠️ API key do Gemini não configurada. Edita a constante GEMINI_API_KEY no app.js com a tua key de <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--primary);">aistudio.google.com/apikey</a></p>';
+            return;
+        }
+
+        var context = buildDogContext();
+        var systemPrompt = 'És um assistente veterinário virtual integrado na app MelucaFeeder. Respondes em português de Portugal (PT-PT). Sê conciso, prático e amigável. Não uses markdown. Usa parágrafos curtos. Nunca recomendas medicação sem consulta veterinária.';
+        var fullPrompt = 'Contexto da cadela:\n' + context + '\n\nPedido: ' + userPrompt;
+
+        aiResponseEl.innerHTML = '<div class="ai-loading">A pensar...</div>';
+        setAiButtonsDisabled(true);
+
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system_instruction: { parts: [{ text: systemPrompt }] },
+                contents: [{ parts: [{ text: fullPrompt }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 1024
+                }
+            })
+        })
+        .then(function (res) {
+            if (res.status === 429) throw new Error('Muitos pedidos. Tenta novamente daqui a pouco.');
+            if (!res.ok) throw new Error('Erro ' + res.status);
+            return res.json();
+        })
+        .then(function (data) {
+            var text = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+            if (!text) throw new Error('Resposta vazia do Gemini');
+            aiResponseEl.innerHTML = text.split('\n').filter(function (l) { return l.trim(); }).map(function (p) { return '<p>' + escapeHtml(p) + '</p>'; }).join('');
+        })
+        .catch(function (err) {
+            aiResponseEl.innerHTML = '<p style="color: var(--danger);">❌ ' + escapeHtml(err.message) + '</p>';
+        })
+        .finally(function () {
+            setAiButtonsDisabled(false);
+        });
+    }
+
+    function setAiButtonsDisabled(disabled) {
+        document.querySelectorAll('.btn-ai-prompt').forEach(function (btn) { btn.disabled = disabled; });
+        if (aiAskBtnEl) aiAskBtnEl.disabled = disabled;
+    }
 
     // === Start ===
     initTheme();

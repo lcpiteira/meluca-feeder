@@ -95,6 +95,7 @@
                 <button class="tab" data-tab="weight">⚖️ Peso</button>
                 <button class="tab" data-tab="health">🏥 Saúde</button>
                 <button class="tab" data-tab="heat">🩸 Cio</button>
+                <button class="tab" data-tab="ai">✨ AI</button>
             </nav>
 
             <!-- Tab: Dashboard -->
@@ -322,6 +323,27 @@
                     <div class="heat-history-section">
                         <h3 style="font-size: 0.8rem; color: var(--text-muted); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 1px;">Histórico de cios</h3>
                         <div class="heat-history" id="heatHistory"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab: AI Insights -->
+            <div class="tab-content" id="tab-ai">
+                <section class="ai-section">
+                    <h2>✨ Insights AI</h2>
+                    <p class="ai-description">Análise inteligente dos dados da tua cadela, powered by Gemini.</p>
+                    <div class="ai-prompts">
+                        <button class="btn btn-ai-prompt" data-prompt="health-summary">🏥 Resumo de saúde</button>
+                        <button class="btn btn-ai-prompt" data-prompt="weight-analysis">⚖️ Análise de peso</button>
+                        <button class="btn btn-ai-prompt" data-prompt="feeding-tips">🍽️ Dicas de alimentação</button>
+                        <button class="btn btn-ai-prompt" data-prompt="heat-prediction">🩸 Previsão de cio</button>
+                    </div>
+                    <div class="ai-custom">
+                        <input type="text" id="aiCustomPrompt" placeholder="Faz uma pergunta sobre a tua cadela..." class="input">
+                        <button class="btn btn-primary" id="aiAskBtn">Perguntar</button>
+                    </div>
+                    <div class="ai-response" id="aiResponse">
+                        <p class="empty-history">Clica num botão ou faz uma pergunta para começar.</p>
                     </div>
                 </section>
             </div>
