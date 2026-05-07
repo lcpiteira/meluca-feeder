@@ -1309,7 +1309,9 @@
         weightRef.orderByChild('date').on('value', function (snapshot) {
             var data = snapshot.val();
             if (data) {
-                weightData = Object.values(data).sort(function (a, b) {
+                weightData = Object.entries(data).map(function (e) {
+                    return Object.assign({ id: e[0] }, e[1]);
+                }).sort(function (a, b) {
                     return new Date(a.date) - new Date(b.date);
                 });
             } else {
@@ -2708,7 +2710,8 @@
             heatHistoryEl.innerHTML = '<p class="empty-history">Sem registos</p>';
             return;
         }
-        heatHistoryEl.innerHTML = heatCycles.map(function (c) {
+        heatHistoryEl.innerHTML = '';
+        heatCycles.forEach(function (c) {
             var start = formatDateShort(new Date(c.startDate));
             var end = c.endDate ? formatDateShort(new Date(c.endDate)) : 'em curso';
             var duration = '';
@@ -2716,11 +2719,35 @@
                 var days = Math.floor((new Date(c.endDate) - new Date(c.startDate)) / 86400000);
                 duration = days + ' dias de sangramento';
             }
-            return '<div class="heat-history-item">' +
-                '<span class="heat-history-dates">' + start + ' → ' + end + '</span>' +
-                '<span class="heat-history-duration">' + duration + '</span>' +
-                '</div>';
-        }).join('');
+            var div = document.createElement('div');
+            div.className = 'heat-history-item';
+            var dates = document.createElement('span');
+            dates.className = 'heat-history-dates';
+            dates.textContent = start + ' → ' + end;
+            div.appendChild(dates);
+            var dur = document.createElement('span');
+            dur.className = 'heat-history-duration';
+            dur.textContent = duration;
+            div.appendChild(dur);
+            if (c.id) {
+                var del = document.createElement('button');
+                del.className = 'btn-icon-delete';
+                del.textContent = '🗑️';
+                del.title = 'Apagar ciclo';
+                del.addEventListener('click', function () { deleteHeatCycle(c.id, start); });
+                div.appendChild(del);
+            }
+            heatHistoryEl.appendChild(div);
+        });
+    }
+
+    function deleteHeatCycle(id, startDate) {
+        if (!confirm('Apagar ciclo de cio de ' + startDate + '?')) return;
+        dogRef('heatCycles/' + id).remove().then(function () {
+            showToast('Ciclo de cio apagado');
+        }).catch(function (err) {
+            showToast('Erro ao apagar: ' + err.message);
+        });
     }
 
     function renderHeatPrediction(lastCompleted) {
@@ -2844,12 +2871,35 @@
         weightLastEl.innerHTML = '<span class="weight-current">' + last.weight + ' kg</span> <span class="weight-date">(' + daysText + ')</span>';
 
         var recent = weightData.slice(-10).reverse();
-        weightHistoryEl.innerHTML = recent.map(function (e) {
+        weightHistoryEl.innerHTML = '';
+        recent.forEach(function (e) {
             var d = new Date(e.date);
-            return '<div class="weight-entry"><span>' + e.weight + ' kg</span><span class="date">' + formatDateTime(d) + '</span></div>';
-        }).join('');
+            var div = document.createElement('div');
+            div.className = 'weight-entry';
+            var info = document.createElement('span');
+            info.innerHTML = e.weight + ' kg <span class="date">' + formatDateTime(d) + '</span>';
+            div.appendChild(info);
+            if (e.id) {
+                var del = document.createElement('button');
+                del.className = 'btn-icon-delete';
+                del.textContent = '🗑️';
+                del.title = 'Apagar registo';
+                del.addEventListener('click', function () { deleteWeightEntry(e.id, e.weight); });
+                div.appendChild(del);
+            }
+            weightHistoryEl.appendChild(div);
+        });
 
         drawChart();
+    }
+
+    function deleteWeightEntry(id, weight) {
+        if (!confirm('Apagar registo de ' + weight + ' kg?')) return;
+        dogRef('weight/' + id).remove().then(function () {
+            showToast('Registo de peso apagado');
+        }).catch(function (err) {
+            showToast('Erro ao apagar: ' + err.message);
+        });
     }
 
     function clearChart() {

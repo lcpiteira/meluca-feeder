@@ -1294,6 +1294,21 @@ section h2 {
     font-size: 0.75rem;
 }
 
+.btn-icon-delete {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-icon-delete:hover {
+    opacity: 1;
+}
+
 /* Rupture Info */
 .rupture-info {
     text-align: center;
@@ -1887,6 +1902,7 @@ section h2 {
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.85rem;
+    gap: 8px;
 }
 
 .heat-history-item:last-child {
