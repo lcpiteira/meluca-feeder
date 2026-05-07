@@ -150,6 +150,9 @@
     const vetCostEl = document.getElementById('vetCost');
     const vetNotesEl = document.getElementById('vetNotes');
     const vetAddBtnEl = document.getElementById('vetAddBtn');
+    const vetFormEl = document.getElementById('vetForm');
+    const vetToggleFormBtnEl = document.getElementById('vetToggleFormBtn');
+    const vetCancelBtnEl = document.getElementById('vetCancelBtn');
     const vetFilterBarEl = document.getElementById('vetFilterBar');
     const vetUpcomingEl = document.getElementById('vetUpcoming');
     const vetHistoryEl = document.getElementById('vetHistory');
@@ -2037,6 +2040,15 @@
         kibbleCalcBtnEl.addEventListener('click', handleKibbleCalc);
         kibbleShopBtnEl.addEventListener('click', handleKibbleShop);
         vetAddBtnEl.addEventListener('click', handleVetAdd);
+        vetToggleFormBtnEl.addEventListener('click', function () {
+            vetFormEl.style.display = '';
+            vetToggleFormBtnEl.style.display = 'none';
+            vetDescEl.focus();
+        });
+        vetCancelBtnEl.addEventListener('click', function () {
+            vetFormEl.style.display = 'none';
+            vetToggleFormBtnEl.style.display = '';
+        });
         healthNoteBtnEl.addEventListener('click', handleHealthNote);
         healthNoteTextEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleHealthNote();
@@ -2342,6 +2354,8 @@
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
+        vetFormEl.style.display = 'none';
+        vetToggleFormBtnEl.style.display = '';
         showToast('Registo veterinário adicionado');
     }
 

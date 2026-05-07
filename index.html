@@ -278,8 +278,11 @@
             <!-- Tab: Saúde -->
             <div class="tab-content" id="tab-health">
                 <section class="vet-section">
-                    <h2>Registo Veterinário</h2>
-                    <div class="vet-form">
+                    <div class="vet-section-header">
+                        <h2>Registo Veterinário</h2>
+                        <button class="btn btn-primary btn-sm" id="vetToggleFormBtn">+ Novo registo</button>
+                    </div>
+                    <div class="vet-form" id="vetForm" style="display:none;">
                         <button class="custom-dropdown-btn has-value" id="vetTypeBtn">🩺 Consulta</button>
                         <input type="hidden" id="vetType" value="consulta">
                         <input type="text" id="vetDesc" placeholder="Descrição" class="vet-input">
@@ -315,7 +318,10 @@
                             </div>
                         </div>
                         <textarea id="vetNotes" placeholder="Observações (opcional)" class="vet-input vet-textarea" rows="2"></textarea>
-                        <button id="vetAddBtn" class="btn btn-primary">Registar</button>
+                        <div class="vet-form-actions">
+                            <button class="btn btn-secondary" id="vetCancelBtn">Cancelar</button>
+                            <button id="vetAddBtn" class="btn btn-primary">Registar</button>
+                        </div>
                     </div>
                     <div class="vet-filter-bar" id="vetFilterBar"></div>
                     <div class="vet-upcoming" id="vetUpcoming"></div>
