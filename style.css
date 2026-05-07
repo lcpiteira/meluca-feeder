@@ -125,6 +125,9 @@ body {
     margin: 0 auto;
     padding: 16px;
     padding-bottom: 32px;
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Login Screen */
@@ -651,27 +654,37 @@ body {
 /* Tabs */
 .tabs {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     background: var(--card);
     border: 1px solid var(--card-border);
     border-radius: var(--radius);
     padding: 4px;
     margin-bottom: 16px;
     box-shadow: var(--shadow);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
 }
 
 .tab {
     flex: 1;
-    padding: 10px 8px;
+    min-width: 0;
+    padding: 10px 6px;
     border: none;
     border-radius: 12px;
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tab:hover {
@@ -2603,8 +2616,24 @@ footer {
     }
 
     .tab {
-        font-size: 0.75rem;
-        padding: 10px 6px;
+        font-size: 0.7rem;
+        padding: 8px 4px;
+    }
+
+    .header-top {
+        padding-right: 80px;
+    }
+
+    .header-actions {
+        top: 12px;
+        right: 12px;
+        gap: 6px;
+    }
+
+    .header-icon-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 1rem;
     }
 
     .btn {
@@ -2688,6 +2717,15 @@ footer {
 
     section h2 {
         font-size: 0.75rem;
+    }
+
+    .tab {
+        font-size: 0.65rem;
+        padding: 8px 3px;
+    }
+
+    .header-top {
+        padding-right: 72px;
     }
 
     .btn {
