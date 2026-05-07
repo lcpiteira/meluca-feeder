@@ -36,6 +36,66 @@
 
     var currentRecipe = [];
 
+    var KIBBLE_BRANDS = [
+        { value: 'royal_canin', label: 'Royal Canin' },
+        { value: 'purina_proplan', label: 'Purina Pro Plan' },
+        { value: 'hills', label: "Hill's Science Plan" },
+        { value: 'eukanuba', label: 'Eukanuba' },
+        { value: 'advance', label: 'Advance (Affinity)' },
+        { value: 'acana', label: 'Acana' },
+        { value: 'orijen', label: 'Orijen' },
+        { value: 'brit_care', label: 'Brit Care' },
+        { value: 'brit_premium', label: 'Brit Premium' },
+        { value: 'ownat', label: 'Ownat' },
+        { value: 'libra', label: 'Libra' },
+        { value: 'criadores', label: 'Criadores' },
+        { value: 'gosbi', label: 'Gosbi' },
+        { value: 'true_instinct', label: 'True Instinct' },
+        { value: 'taste_wild', label: 'Taste of the Wild' },
+        { value: 'farmina', label: 'Farmina N&D' },
+        { value: 'virbac', label: 'Virbac Veterinary HPM' },
+        { value: 'specific', label: 'Specific' },
+        { value: 'nutro', label: 'Nutro' },
+        { value: 'wolfood', label: 'Wolfood' },
+        { value: 'prozoo', label: 'Pro Zoo' },
+        { value: 'ultima', label: 'Ultima' },
+        { value: 'pedigree', label: 'Pedigree' },
+        { value: 'friskies', label: 'Friskies' },
+        { value: 'other', label: 'Outra' }
+    ];
+
+    var KIBBLE_LIFE_STAGES = [
+        { value: 'puppy', label: '🐶 Puppy / Junior' },
+        { value: 'adult', label: '🐕 Adulto' },
+        { value: 'senior', label: '🐕‍🦺 Sénior (7+)' }
+    ];
+
+    var KIBBLE_PROTEINS = [
+        { value: 'chicken', label: '🍗 Frango' },
+        { value: 'lamb', label: '🐑 Borrego' },
+        { value: 'beef', label: '🥩 Vaca' },
+        { value: 'duck', label: '🦆 Pato' },
+        { value: 'salmon', label: '🐟 Salmão' },
+        { value: 'fish', label: '🐠 Peixe' },
+        { value: 'turkey', label: '🦃 Peru' },
+        { value: 'pork', label: '🐷 Porco' },
+        { value: 'venison', label: '🦌 Veado' },
+        { value: 'rabbit', label: '🐇 Coelho' },
+        { value: 'mixed', label: '🍖 Misto' }
+    ];
+
+    var KIBBLE_SPECIAL = [
+        { value: 'none', label: 'Nenhuma' },
+        { value: 'sterilized', label: '✂️ Esterilizado / Castrado' },
+        { value: 'hypoallergenic', label: '🤧 Hipoalergénico' },
+        { value: 'sensitive', label: '🫄 Digestão sensível' },
+        { value: 'light', label: '⚖️ Light / Controlo de peso' },
+        { value: 'grain_free', label: '🌾 Grain Free' },
+        { value: 'dermatology', label: '🧴 Dermatológico' },
+        { value: 'renal', label: '💧 Renal' },
+        { value: 'joint', label: '🦴 Articulações' }
+    ];
+
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
         authDomain: "melucafeeder.firebaseapp.com",
@@ -64,6 +124,8 @@
     const alertPanel = document.getElementById('alertPanel');
     const telegramPanel = document.getElementById('telegramPanel');
     const recipePanel = document.getElementById('recipePanel');
+    const feedingPanel = document.getElementById('feedingPanel');
+    const kibblePanel = document.getElementById('kibblePanel');
     const weightPanel = document.getElementById('weightPanel');
     const invitePanel = document.getElementById('invitePanel');
     const actionsPanel = document.getElementById('actionsPanel');
@@ -90,7 +152,19 @@
     const telegramChatIdEl = document.getElementById('telegramChatId');
     const recipeIngredientsEl = document.getElementById('recipeIngredients');
     const addIngredientBtnEl = document.getElementById('addIngredientBtn');
+    const kibbleBrandEl = document.getElementById('kibbleBrand');
+    const kibbleBrandBtnEl = document.getElementById('kibbleBrandBtn');
+    const kibbleLifeStageEl = document.getElementById('kibbleLifeStage');
+    const kibbleLifeStageBtnEl = document.getElementById('kibbleLifeStageBtn');
+    const kibbleProteinEl = document.getElementById('kibbleProtein');
+    const kibbleProteinBtnEl = document.getElementById('kibbleProteinBtn');
+    const kibbleSpecialEl = document.getElementById('kibbleSpecial');
+    const kibbleSpecialBtnEl = document.getElementById('kibbleSpecialBtn');
+    const kibbleAmountEl = document.getElementById('kibbleAmount');
+    const kibbleMealsEl = document.getElementById('kibbleMeals');
     const targetWeightEl = document.getElementById('targetWeight');
+
+    var currentFeedingMode = 'homemade';
 
     // Wait for auth state
     firebase.auth().onAuthStateChanged(function (user) {
@@ -115,7 +189,9 @@
         profilePanel.style.display = '';
         alertPanel.style.display = '';
         telegramPanel.style.display = '';
+        feedingPanel.style.display = '';
         recipePanel.style.display = '';
+        kibblePanel.style.display = '';
         weightPanel.style.display = '';
         invitePanel.style.display = '';
         sharePanel.style.display = '';
@@ -148,6 +224,39 @@
         currentRecipe = migrateRecipe(s.recipe);
         renderRecipeIngredients();
         targetWeightEl.value = s.targetWeight || '';
+
+        // Feeding mode
+        currentFeedingMode = s.feedingMode || 'homemade';
+        setFeedingMode(currentFeedingMode);
+
+        // Kibble settings
+        var k = s.kibble || {};
+        kibbleAmountEl.value = k.amount || 150;
+        kibbleMealsEl.value = k.mealsPerDay || 2;
+        setDropdownValue(kibbleBrandBtnEl, kibbleBrandEl, k.brand, KIBBLE_BRANDS);
+        setDropdownValue(kibbleLifeStageBtnEl, kibbleLifeStageEl, k.lifeStage, KIBBLE_LIFE_STAGES);
+        setDropdownValue(kibbleProteinBtnEl, kibbleProteinEl, k.protein, KIBBLE_PROTEINS);
+        setDropdownValue(kibbleSpecialBtnEl, kibbleSpecialEl, k.special, KIBBLE_SPECIAL);
+    }
+
+    function setDropdownValue(btn, input, value, options) {
+        if (value) {
+            input.value = value;
+            var opt = options.find(function (o) { return o.value === value; });
+            if (opt) {
+                btn.textContent = opt.label;
+                btn.classList.add('has-value');
+            }
+        }
+    }
+
+    function setFeedingMode(mode) {
+        currentFeedingMode = mode;
+        document.querySelectorAll('.feeding-mode-btn').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+        });
+        recipePanel.style.display = mode === 'homemade' ? '' : 'none';
+        kibblePanel.style.display = mode === 'kibble' ? '' : 'none';
     }
 
     function migrateRecipe(recipe) {
@@ -256,7 +365,16 @@
             alertThreshold: parseInt(alertThresholdEl.value, 10) || 5,
             telegramToken: telegramTokenEl.value.trim(),
             telegramChatId: telegramChatIdEl.value.trim(),
+            feedingMode: currentFeedingMode,
             recipe: currentRecipe.filter(function (item) { return item.amount > 0; }),
+            kibble: {
+                brand: kibbleBrandEl.value || '',
+                lifeStage: kibbleLifeStageEl.value || '',
+                protein: kibbleProteinEl.value || '',
+                special: kibbleSpecialEl.value || '',
+                amount: parseInt(kibbleAmountEl.value, 10) || 150,
+                mealsPerDay: parseInt(kibbleMealsEl.value, 10) || 2
+            },
             targetWeight: parseFloat(targetWeightEl.value) || null
         };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -739,6 +857,46 @@
             shareDurationEl.value = value;
             shareDurationBtnEl.textContent = label;
             shareDurationBtnEl.classList.add('has-value');
+        }, { searchable: false });
+    });
+
+    // Feeding mode toggle
+    document.querySelectorAll('.feeding-mode-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setFeedingMode(btn.getAttribute('data-mode'));
+        });
+    });
+
+    // Kibble dropdowns
+    kibbleBrandBtnEl.addEventListener('click', function () {
+        showDropdown('Marca de Ração', KIBBLE_BRANDS, kibbleBrandEl.value, function (value, label) {
+            kibbleBrandEl.value = value;
+            kibbleBrandBtnEl.textContent = label;
+            kibbleBrandBtnEl.classList.add('has-value');
+        });
+    });
+
+    kibbleLifeStageBtnEl.addEventListener('click', function () {
+        showDropdown('Fase de Vida', KIBBLE_LIFE_STAGES, kibbleLifeStageEl.value, function (value, label) {
+            kibbleLifeStageEl.value = value;
+            kibbleLifeStageBtnEl.textContent = label;
+            kibbleLifeStageBtnEl.classList.add('has-value');
+        }, { searchable: false });
+    });
+
+    kibbleProteinBtnEl.addEventListener('click', function () {
+        showDropdown('Proteína Principal', KIBBLE_PROTEINS, kibbleProteinEl.value, function (value, label) {
+            kibbleProteinEl.value = value;
+            kibbleProteinBtnEl.textContent = label;
+            kibbleProteinBtnEl.classList.add('has-value');
+        }, { searchable: false });
+    });
+
+    kibbleSpecialBtnEl.addEventListener('click', function () {
+        showDropdown('Necessidade Especial', KIBBLE_SPECIAL, kibbleSpecialEl.value, function (value, label) {
+            kibbleSpecialEl.value = value;
+            kibbleSpecialBtnEl.textContent = label;
+            kibbleSpecialBtnEl.classList.add('has-value');
         }, { searchable: false });
     });
 

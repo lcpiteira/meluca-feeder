@@ -98,11 +98,55 @@
             </div>
         </section>
 
+        <section class="settings-section" id="feedingPanel" style="display: none;">
+            <h2>Alimentação</h2>
+            <p class="section-desc">Define o tipo de alimentação do cão.</p>
+            <div class="feeding-mode-toggle">
+                <button class="feeding-mode-btn active" data-mode="homemade">🍳 Caseira</button>
+                <button class="feeding-mode-btn" data-mode="kibble">🥣 Ração</button>
+            </div>
+        </section>
+
         <section class="settings-section" id="recipePanel" style="display: none;">
             <h2>Receita (por refeição)</h2>
             <p class="section-desc">Define os ingredientes e quantidades por refeição.</p>
             <div id="recipeIngredients" class="recipe-ingredients-list"></div>
             <button id="addIngredientBtn" class="btn btn-outline recipe-add-btn">+ Adicionar ingrediente</button>
+        </section>
+
+        <section class="settings-section" id="kibblePanel" style="display: none;">
+            <h2>Ração</h2>
+            <p class="section-desc">Configura o tipo e quantidade de ração por refeição.</p>
+            <div class="settings-form">
+                <div class="setting-group">
+                    <label>Marca:</label>
+                    <button class="custom-dropdown-btn" id="kibbleBrandBtn">Seleccionar marca</button>
+                    <input type="hidden" id="kibbleBrand">
+                </div>
+                <div class="setting-group">
+                    <label>Fase de vida:</label>
+                    <button class="custom-dropdown-btn" id="kibbleLifeStageBtn">Seleccionar fase</button>
+                    <input type="hidden" id="kibbleLifeStage">
+                </div>
+                <div class="setting-group">
+                    <label>Proteína principal:</label>
+                    <button class="custom-dropdown-btn" id="kibbleProteinBtn">Seleccionar proteína</button>
+                    <input type="hidden" id="kibbleProtein">
+                </div>
+                <div class="setting-group">
+                    <label>Necessidade especial:</label>
+                    <button class="custom-dropdown-btn" id="kibbleSpecialBtn">Nenhuma</button>
+                    <input type="hidden" id="kibbleSpecial">
+                </div>
+                <div class="setting-group">
+                    <label>Gramas por refeição:</label>
+                    <input type="number" id="kibbleAmount" min="1" step="5" value="150" class="vet-input">
+                </div>
+                <div class="setting-group">
+                    <label>Refeições por dia:</label>
+                    <input type="number" id="kibbleMeals" min="1" max="6" step="1" value="2" class="vet-input">
+                </div>
+            </div>
         </section>
 
         <section class="settings-section" id="weightPanel" style="display: none;">

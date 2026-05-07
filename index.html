@@ -197,27 +197,59 @@
 
             <!-- Tab: Preparação -->
             <div class="tab-content" id="tab-prep">
-                <section class="calculator-section">
-                    <h2>Calculadora de Ingredientes</h2>
-                    <p class="section-desc">Introduz as quantidades disponíveis para calcular quantas refeições consegues preparar.</p>
-                    <div class="calc-ingredients" id="calcIngredients"></div>
-                    <button id="calcBtn" class="btn btn-primary calc-btn">Calcular Refeições</button>
-                    <div class="calc-result" id="calcResult" style="display: none;">
-                        <span class="calc-result-number" id="calcResultNumber">0</span>
-                        <span class="calc-result-label">refeições possíveis</span>
-                        <p class="calc-result-detail" id="calcResultDetail"></p>
-                    </div>
-                </section>
+                <!-- Homemade mode -->
+                <div id="prepHomemade">
+                    <section class="calculator-section">
+                        <h2>Calculadora de Ingredientes</h2>
+                        <p class="section-desc">Introduz as quantidades disponíveis para calcular quantas refeições consegues preparar.</p>
+                        <div class="calc-ingredients" id="calcIngredients"></div>
+                        <button id="calcBtn" class="btn btn-primary calc-btn">Calcular Refeições</button>
+                        <div class="calc-result" id="calcResult" style="display: none;">
+                            <span class="calc-result-number" id="calcResultNumber">0</span>
+                            <span class="calc-result-label">refeições possíveis</span>
+                            <p class="calc-result-detail" id="calcResultDetail"></p>
+                        </div>
+                    </section>
 
-                <section class="shopping-section">
-                    <h2>Lista de Compras</h2>
-                    <p class="section-desc">Quantas refeições queres preparar?</p>
-                    <div class="shopping-input-row">
-                        <input type="number" id="shoppingTarget" min="1" value="14" placeholder="Nº refeições">
-                        <button id="shoppingBtn" class="btn btn-primary">Gerar Lista</button>
-                    </div>
-                    <div class="shopping-list" id="shoppingList" style="display: none;"></div>
-                </section>
+                    <section class="shopping-section">
+                        <h2>Lista de Compras</h2>
+                        <p class="section-desc">Quantas refeições queres preparar?</p>
+                        <div class="shopping-input-row">
+                            <input type="number" id="shoppingTarget" min="1" value="14" placeholder="Nº refeições">
+                            <button id="shoppingBtn" class="btn btn-primary">Gerar Lista</button>
+                        </div>
+                        <div class="shopping-list" id="shoppingList" style="display: none;"></div>
+                    </section>
+                </div>
+
+                <!-- Kibble mode -->
+                <div id="prepKibble" style="display: none;">
+                    <section class="calculator-section">
+                        <h2>Calculadora de Ração</h2>
+                        <div class="kibble-info" id="kibbleInfo"></div>
+                        <div class="calc-row">
+                            <span class="calc-icon">🥣</span>
+                            <label>Ração disponível (kg)</label>
+                            <input type="number" id="kibbleStock" min="0" step="0.1" value="0" class="calc-input">
+                        </div>
+                        <button id="kibbleCalcBtn" class="btn btn-primary calc-btn">Calcular Duração</button>
+                        <div class="calc-result" id="kibbleCalcResult" style="display: none;">
+                            <span class="calc-result-number" id="kibbleCalcDays">0</span>
+                            <span class="calc-result-label">dias de ração</span>
+                            <p class="calc-result-detail" id="kibbleCalcDetail"></p>
+                        </div>
+                    </section>
+
+                    <section class="shopping-section">
+                        <h2>Próxima Compra</h2>
+                        <p class="section-desc">Quantos dias de ração queres garantir?</p>
+                        <div class="shopping-input-row">
+                            <input type="number" id="kibbleDaysTarget" min="1" value="30" placeholder="Nº dias">
+                            <button id="kibbleShopBtn" class="btn btn-primary">Calcular</button>
+                        </div>
+                        <div class="shopping-list" id="kibbleShopResult" style="display: none;"></div>
+                    </section>
+                </div>
             </div>
 
             <!-- Tab: Peso -->

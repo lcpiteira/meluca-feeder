@@ -121,6 +121,17 @@
     const shoppingTargetEl = document.getElementById('shoppingTarget');
     const shoppingBtnEl = document.getElementById('shoppingBtn');
     const shoppingListEl = document.getElementById('shoppingList');
+    const prepHomemadeEl = document.getElementById('prepHomemade');
+    const prepKibbleEl = document.getElementById('prepKibble');
+    const kibbleInfoEl = document.getElementById('kibbleInfo');
+    const kibbleStockEl = document.getElementById('kibbleStock');
+    const kibbleCalcBtnEl = document.getElementById('kibbleCalcBtn');
+    const kibbleCalcResultEl = document.getElementById('kibbleCalcResult');
+    const kibbleCalcDaysEl = document.getElementById('kibbleCalcDays');
+    const kibbleCalcDetailEl = document.getElementById('kibbleCalcDetail');
+    const kibbleDaysTargetEl = document.getElementById('kibbleDaysTarget');
+    const kibbleShopBtnEl = document.getElementById('kibbleShopBtn');
+    const kibbleShopResultEl = document.getElementById('kibbleShopResult');
     const vetTypeEl = document.getElementById('vetType');
     const vetTypeBtnEl = document.getElementById('vetTypeBtn');
     const vetDescEl = document.getElementById('vetDesc');
@@ -349,7 +360,7 @@
         updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
         updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
         updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
-        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }] };
+        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', feedingMode: 'homemade', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }], kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2 } };
         updates['users/' + currentUser.uid + '/dogs/' + dogId] = true;
 
         db.ref().update(updates).then(function () {
@@ -789,6 +800,7 @@
                 settings = cloudSettings;
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
                 renderCalcIngredients();
+                updatePrepMode();
             }
         });
         listeners.push({ ref: settingsRef, event: 'value' });
@@ -850,7 +862,7 @@
             var raw = localStorage.getItem(SETTINGS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) { /* ignore */ }
-        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }] };
+        return { alertThreshold: 5, telegramToken: '', telegramChatId: '', feedingMode: 'homemade', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }], kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2 } };
     }
 
     function migrateRecipe(recipe) {
@@ -885,6 +897,58 @@
                 '<input type="number" data-ingredient="' + item.id + '" min="0" value="0" step="' + step + '" class="calc-input">' +
                 '</div>';
         }).join('');
+    }
+
+    function updatePrepMode() {
+        var mode = settings.feedingMode || 'homemade';
+        prepHomemadeEl.style.display = mode === 'homemade' ? '' : 'none';
+        prepKibbleEl.style.display = mode === 'kibble' ? '' : 'none';
+        if (mode === 'kibble') renderKibbleInfo();
+    }
+
+    function renderKibbleInfo() {
+        var k = settings.kibble || {};
+        var parts = [];
+        if (k.brand) {
+            var brandLabel = k.brand;
+            var KIBBLE_BRANDS_MAP = { royal_canin: 'Royal Canin', purina_proplan: 'Purina Pro Plan', hills: "Hill's", eukanuba: 'Eukanuba', advance: 'Advance', acana: 'Acana', orijen: 'Orijen', brit_care: 'Brit Care', brit_premium: 'Brit Premium', ownat: 'Ownat', libra: 'Libra', criadores: 'Criadores', gosbi: 'Gosbi', true_instinct: 'True Instinct', taste_wild: 'Taste of the Wild', farmina: 'Farmina N&D', virbac: 'Virbac', specific: 'Specific', nutro: 'Nutro', wolfood: 'Wolfood', prozoo: 'Pro Zoo', ultima: 'Ultima', pedigree: 'Pedigree', friskies: 'Friskies', other: 'Outra' };
+            parts.push('<strong>' + escapeHtml(KIBBLE_BRANDS_MAP[k.brand] || k.brand) + '</strong>');
+        }
+        if (k.amount && k.mealsPerDay) {
+            parts.push(k.amount + 'g × ' + k.mealsPerDay + ' refeições/dia = ' + (k.amount * k.mealsPerDay) + 'g/dia');
+        }
+        kibbleInfoEl.innerHTML = parts.length > 0 ? '<div class="kibble-info-card">' + parts.join('<br>') + '</div>' : '<p class="empty-history">Configura a ração nas definições do cão.</p>';
+    }
+
+    function handleKibbleCalc() {
+        var k = settings.kibble || {};
+        var amount = k.amount || 150;
+        var mealsPerDay = k.mealsPerDay || 2;
+        var dailyGrams = amount * mealsPerDay;
+        var stockKg = parseFloat(kibbleStockEl.value) || 0;
+        if (stockKg <= 0) { showToast('Introduz a quantidade de ração disponível'); return; }
+        var stockGrams = stockKg * 1000;
+        var days = Math.floor(stockGrams / dailyGrams);
+        kibbleCalcDaysEl.textContent = days;
+        kibbleCalcDetailEl.innerHTML = stockKg + ' kg ÷ ' + dailyGrams + ' g/dia = ' + days + ' dias<br>(' + (amount * mealsPerDay) + 'g por dia, ' + mealsPerDay + ' refeições de ' + amount + 'g)';
+        kibbleCalcResultEl.style.display = '';
+    }
+
+    function handleKibbleShop() {
+        var k = settings.kibble || {};
+        var amount = k.amount || 150;
+        var mealsPerDay = k.mealsPerDay || 2;
+        var dailyGrams = amount * mealsPerDay;
+        var days = parseInt(kibbleDaysTargetEl.value, 10) || 30;
+        if (days < 1) { showToast('Introduz um número válido de dias'); return; }
+        var totalGrams = dailyGrams * days;
+        var totalKg = (totalGrams / 1000).toFixed(1);
+        kibbleShopResultEl.style.display = '';
+        kibbleShopResultEl.innerHTML = '<div class="shopping-header">' + days + ' dias</div>' +
+            '<div class="shopping-item"><span class="shopping-name">🥣 Ração</span><span class="shopping-amount">' + totalKg + ' kg</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 2kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 2000) + '</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 7kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 7000) + '</span></div>' +
+            '<div class="shopping-item"><span class="shopping-name">📦 Sacos de 12kg</span><span class="shopping-amount">' + Math.ceil(totalGrams / 12000) + '</span></div>';
     }
 
     // === Firebase Write ===
@@ -1147,6 +1211,8 @@
             if (e.key === 'Enter') handleWeightAdd();
         });
         shoppingBtnEl.addEventListener('click', handleShoppingList);
+        kibbleCalcBtnEl.addEventListener('click', handleKibbleCalc);
+        kibbleShopBtnEl.addEventListener('click', handleKibbleShop);
         vetAddBtnEl.addEventListener('click', handleVetAdd);
         healthNoteBtnEl.addEventListener('click', handleHealthNote);
         healthNoteTextEl.addEventListener('keypress', function (e) {
@@ -1247,6 +1313,7 @@
         // Init calendar + vet date + calc ingredients
         renderCalendar();
         renderCalcIngredients();
+        updatePrepMode();
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
