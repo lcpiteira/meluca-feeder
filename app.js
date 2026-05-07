@@ -116,12 +116,12 @@
     function handleGoogleLogin() {
         var provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch(function (err) {
-            if (err.code === 'auth/popup-blocked') {
-                // Fallback to redirect
+            console.error('Login error:', err.code, err.message);
+            if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
+                showToast('Popup bloqueado. A tentar redirect...');
                 auth.signInWithRedirect(provider);
             } else {
-                console.error('Login error:', err);
-                showToast('Erro no login: ' + err.message);
+                showToast('Erro: ' + err.code);
             }
         });
     }
