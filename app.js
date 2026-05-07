@@ -18,7 +18,7 @@
     const EVENING_HOUR = 21;
     const MAX_AUTO_DEDUCTIONS = 4;
     const GEMINI_API_KEY = 'AIzaSyDOsZbgMdjY9gLjG-KIiOSye4lygDURLXU';
-    const GEMINI_MODEL = 'gemini-2.0-flash';
+    const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 
     var INGREDIENT_POOL = [
         { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
@@ -3255,8 +3255,12 @@
             })
         })
         .then(function (res) {
-            if (res.status === 429) throw new Error('Muitos pedidos. Tenta novamente daqui a pouco.');
-            if (!res.ok) throw new Error('Erro ' + res.status);
+            if (!res.ok) {
+                return res.json().then(function (errData) {
+                    var msg = errData && errData.error && errData.error.message ? errData.error.message : 'Erro ' + res.status;
+                    throw new Error(msg);
+                });
+            }
             return res.json();
         })
         .then(function (data) {
