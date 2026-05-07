@@ -47,53 +47,13 @@
                 <div class="dogs-list" id="dogsList"></div>
                 <div class="dogs-actions">
                     <div class="dogs-create">
-                        <h3>Adicionar novo cão</h3>
-                        <div class="dog-form-grid">
-                            <div class="dog-form-row">
-                                <input type="text" id="newDogName" placeholder="Nome *" class="vet-input">
-                            </div>
-                            <div class="dog-form-row">
-                                <button class="custom-dropdown-btn" id="newDogBreedBtn">Raça</button>
-                                <input type="hidden" id="newDogBreed">
-                            </div>
-                            <div class="dog-form-row dog-form-half">
-                                <div class="dog-form-radio-group">
-                                    <label class="dog-radio-label">
-                                        <input type="radio" name="newDogSex" value="M"> ♂ Macho
-                                    </label>
-                                    <label class="dog-radio-label">
-                                        <input type="radio" name="newDogSex" value="F"> ♀ Fêmea
-                                    </label>
-                                </div>
-                                <div>
-                                    <label class="dog-checkbox-label">
-                                        <input type="checkbox" id="newDogNeutered">
-                                        <span class="check-icon"></span> Esterilizado/a
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="dog-form-row dog-form-half">
-                                <div>
-                                    <label class="dog-form-label">Nascimento</label>
-                                    <button class="date-picker-btn" id="newDogBirthdayBtn">Seleccionar data</button>
-                                    <input type="hidden" id="newDogBirthday">
-                                </div>
-                                <div>
-                                    <label class="dog-form-label">Cor</label>
-                                    <input type="text" id="newDogColor" placeholder="Ex: Castanho" class="vet-input">
-                                </div>
-                            </div>
-                            <div class="dog-form-row">
-                                <input type="text" id="newDogChip" placeholder="Nº Microchip (opcional)" class="vet-input">
-                            </div>
-                            <div class="dog-form-row">
-                                <button class="btn btn-primary" id="createDogBtn" style="width: 100%;">Criar Cão</button>
-                            </div>
+                        <div class="dogs-create-row">
+                            <input type="text" id="newDogName" placeholder="Nome do cão" class="vet-input">
+                            <button class="btn btn-primary" id="createDogBtn">+ Criar</button>
                         </div>
                     </div>
                     <div class="onboarding-divider"><span>ou</span></div>
                     <div class="dogs-join">
-                        <h3>Juntar-me a um cão existente</h3>
                         <div class="dogs-create-row">
                             <input type="text" id="inviteCode" placeholder="Código de convite" class="vet-input" maxlength="6" style="text-transform: uppercase;">
                             <button class="btn btn-secondary" id="joinDogBtn">Juntar</button>
@@ -396,15 +356,60 @@
             </div>
             <div class="setup-progress" id="setupProgress"></div>
 
+            <!-- Step 0: Dog profile -->
+            <div class="setup-step active" id="setupStepProfile">
+                <h3>Sobre o teu cão</h3>
+                <div class="dog-form-grid">
+                    <div class="dog-form-row">
+                        <button class="custom-dropdown-btn" id="setupBreedBtn">Raça</button>
+                        <input type="hidden" id="setupBreed">
+                    </div>
+                    <div class="dog-form-row dog-form-half">
+                        <div class="dog-form-radio-group">
+                            <label class="dog-radio-label">
+                                <input type="radio" name="setupSex" value="M"> ♂ Macho
+                            </label>
+                            <label class="dog-radio-label">
+                                <input type="radio" name="setupSex" value="F"> ♀ Fêmea
+                            </label>
+                        </div>
+                        <div>
+                            <label class="dog-checkbox-label">
+                                <input type="checkbox" id="setupNeutered">
+                                <span class="check-icon"></span> Esterilizado/a
+                            </label>
+                        </div>
+                    </div>
+                    <div class="dog-form-row dog-form-half">
+                        <div>
+                            <label class="dog-form-label">Nascimento</label>
+                            <button class="date-picker-btn" id="setupBirthdayBtn">Seleccionar data</button>
+                            <input type="hidden" id="setupBirthday">
+                        </div>
+                        <div>
+                            <label class="dog-form-label">Cor</label>
+                            <input type="text" id="setupColor" placeholder="Ex: Castanho" class="vet-input">
+                        </div>
+                    </div>
+                    <div class="dog-form-row">
+                        <input type="text" id="setupChip" placeholder="Nº Microchip (opcional)" class="vet-input">
+                    </div>
+                </div>
+                <div class="setup-step-actions">
+                    <button class="btn btn-link" id="setupSkip" style="font-size: 0.8rem; opacity: 0.6;">Configurar depois</button>
+                    <button class="btn btn-primary" id="setupNextProfile">Seguinte →</button>
+                </div>
+            </div>
+
             <!-- Step 1: Feeding mode -->
-            <div class="setup-step active" id="setupStep1">
+            <div class="setup-step" id="setupStep1">
                 <h3>Tipo de alimentação</h3>
                 <div class="feeding-mode-toggle" style="margin-bottom: 16px;">
                     <button class="feeding-mode-btn active" data-mode="homemade" id="setupModeHomemade">🍳 Caseira</button>
                     <button class="feeding-mode-btn" data-mode="kibble" id="setupModeKibble">🥣 Ração</button>
                 </div>
                 <div class="setup-step-actions">
-                    <button class="btn btn-link" id="setupSkip" style="font-size: 0.8rem; opacity: 0.6;">Configurar depois</button>
+                    <button class="btn btn-secondary" id="setupBackMode">← Voltar</button>
                     <button class="btn btn-primary" id="setupNext1">Seguinte →</button>
                 </div>
             </div>

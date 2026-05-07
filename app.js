@@ -84,13 +84,9 @@
     const appDogNameEl = document.getElementById('appDogName');
     const backToDogsBtn = document.getElementById('backToDogs');
     const newDogNameEl = document.getElementById('newDogName');
-    const newDogBreedEl = document.getElementById('newDogBreed');
-    const newDogBreedBtnEl = document.getElementById('newDogBreedBtn');
-    const newDogBirthdayEl = document.getElementById('newDogBirthday');
-    const newDogBirthdayBtnEl = document.getElementById('newDogBirthdayBtn');
-    const newDogColorEl = document.getElementById('newDogColor');
-    const newDogNeuteredEl = document.getElementById('newDogNeutered');
-    const newDogChipEl = document.getElementById('newDogChip');
+    const createDogBtnEl = document.getElementById('createDogBtn');
+    const inviteCodeEl = document.getElementById('inviteCode');
+    const joinDogBtnEl = document.getElementById('joinDogBtn');
     const createDogBtnEl = document.getElementById('createDogBtn');
     const inviteCodeEl = document.getElementById('inviteCode');
     const joinDogBtnEl = document.getElementById('joinDogBtn');
@@ -381,46 +377,19 @@
             return;
         }
 
-        var sexRadio = document.querySelector('input[name="newDogSex"]:checked');
-        var profile = {
-            breed: newDogBreedEl.value || '',
-            sex: sexRadio ? sexRadio.value : '',
-            birthday: newDogBirthdayEl.value || '',
-            color: newDogColorEl.value.trim(),
-            neutered: newDogNeuteredEl.checked,
-            chip: newDogChipEl.value.trim()
-        };
-
         var dogId = db.ref('dogs').push().key;
         var updates = {};
         updates['dogs/' + dogId + '/name'] = name;
-        updates['dogs/' + dogId + '/profile'] = profile;
         updates['dogs/' + dogId + '/createdBy'] = currentUser.uid;
         updates['dogs/' + dogId + '/onboardingComplete'] = false;
         updates['dogs/' + dogId + '/members/' + currentUser.uid] = { role: 'owner', name: currentUser.displayName || currentUser.email };
         updates['dogs/' + dogId + '/state'] = { stock: 0, lastProcessed: 0 };
-        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', feedingMode: 'homemade', recipe: [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }], kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2 } };
+        updates['dogs/' + dogId + '/settings'] = { alertThreshold: 5, telegramToken: '', telegramChatId: '', feedingMode: 'homemade', recipe: [], kibble: { brand: '', lifeStage: '', protein: '', special: '', amount: 150, mealsPerDay: 2 } };
         updates['users/' + currentUser.uid + '/dogs/' + dogId] = true;
 
         db.ref().update(updates).then(function () {
             newDogNameEl.value = '';
-            newDogBreedEl.value = '';
-            newDogBreedBtnEl.textContent = 'Raça';
-            newDogBreedBtnEl.classList.remove('has-value');
-            newDogBirthdayEl.value = '';
-            newDogBirthdayBtnEl.textContent = 'Seleccionar data';
-            newDogBirthdayBtnEl.classList.remove('has-value');
-            newDogColorEl.value = '';
-            newDogNeuteredEl.checked = false;
-            newDogNeuteredEl.closest('.dog-checkbox-label').classList.remove('checked');
-            newDogChipEl.value = '';
-            var checked = document.querySelector('input[name="newDogSex"]:checked');
-            if (checked) checked.checked = false;
-            document.querySelectorAll('input[name="newDogSex"]').forEach(function (r) {
-                r.closest('.dog-radio-label').classList.remove('selected');
-            });
             showToast(name + ' criado!');
-            // Auto-select and show wizard
             selectDog(dogId);
         });
     }
@@ -431,11 +400,18 @@
         if (!overlay) return;
         overlay.style.display = '';
 
+        // Get dog name for subtitle
+        db.ref('dogs/' + dogId + '/name').once('value', function (snap) {
+            var sub = document.getElementById('setupSubtitle');
+            if (sub) sub.textContent = 'Configura o perfil de ' + (snap.val() || 'o teu cão');
+        });
+
         var rd = resumeData || {};
         var wizardMode = rd.mode || 'homemade';
         var selectedIngredients = rd.ingredients ? rd.ingredients.slice() : [];
         var wizardRecipe = rd.recipe ? rd.recipe.slice() : [];
-        var currentStepId = rd.step || 'setupStep1';
+        var currentStepId = rd.step || 'setupStepProfile';
+        var wizardProfile = rd.profile || {};
         var allStepEls = overlay.querySelectorAll('.setup-step');
         var WIZARD_KIBBLE_BRANDS = [
             { value: 'royal_canin', label: 'Royal Canin' }, { value: 'purina_proplan', label: 'Purina Pro Plan' }, { value: 'hills', label: "Hill's Science Plan" }, { value: 'eukanuba', label: 'Eukanuba' }, { value: 'advance', label: 'Advance (Affinity)' }, { value: 'acana', label: 'Acana' }, { value: 'orijen', label: 'Orijen' }, { value: 'brit_care', label: 'Brit Care' }, { value: 'brit_premium', label: 'Brit Premium' }, { value: 'ownat', label: 'Ownat' }, { value: 'libra', label: 'Libra' }, { value: 'criadores', label: 'Criadores' }, { value: 'gosbi', label: 'Gosbi' }, { value: 'true_instinct', label: 'True Instinct' }, { value: 'taste_wild', label: 'Taste of the Wild' }, { value: 'farmina', label: 'Farmina N&D' }, { value: 'other', label: 'Outra' }
@@ -461,14 +437,53 @@
             progressEl.innerHTML = html;
         }
 
+        function getProfileFromForm() {
+            var sexRadio = document.querySelector('input[name="setupSex"]:checked');
+            return {
+                breed: document.getElementById('setupBreed').value || '',
+                sex: sexRadio ? sexRadio.value : '',
+                birthday: document.getElementById('setupBirthday').value || '',
+                color: document.getElementById('setupColor').value.trim(),
+                neutered: document.getElementById('setupNeutered').checked,
+                chip: document.getElementById('setupChip').value.trim()
+            };
+        }
+
+        function restoreProfileForm(p) {
+            if (p.breed) {
+                document.getElementById('setupBreed').value = p.breed;
+                document.getElementById('setupBreedBtn').textContent = p.breed;
+                document.getElementById('setupBreedBtn').classList.add('has-value');
+            }
+            if (p.sex) {
+                var radio = document.querySelector('input[name="setupSex"][value="' + p.sex + '"]');
+                if (radio) {
+                    radio.checked = true;
+                    radio.closest('.dog-radio-label').classList.add('selected');
+                }
+            }
+            if (p.birthday) {
+                document.getElementById('setupBirthday').value = p.birthday;
+                document.getElementById('setupBirthdayBtn').textContent = formatPickedDate(p.birthday);
+                document.getElementById('setupBirthdayBtn').classList.add('has-value');
+            }
+            if (p.color) document.getElementById('setupColor').value = p.color;
+            if (p.neutered) {
+                document.getElementById('setupNeutered').checked = true;
+                var lbl = document.getElementById('setupNeutered').closest('.dog-checkbox-label');
+                if (lbl) lbl.classList.add('checked');
+            }
+            if (p.chip) document.getElementById('setupChip').value = p.chip;
+        }
+
         function saveOnboardingState() {
             var data = {
                 mode: wizardMode,
                 step: currentStepId,
-                ingredients: selectedIngredients
+                ingredients: selectedIngredients,
+                profile: getProfileFromForm()
             };
             if (wizardRecipe.length > 0) data.recipe = wizardRecipe;
-            // Save kibble form values if on kibble step
             if (wizardMode === 'kibble') {
                 data.kibble = {
                     brand: document.getElementById('setupKibbleBrand').value || '',
@@ -479,6 +494,12 @@
                 };
             }
             db.ref('dogs/' + dogId + '/onboarding').set(data);
+        }
+
+        function saveProfileToDB() {
+            var profile = getProfileFromForm();
+            db.ref('dogs/' + dogId + '/profile').set(profile);
+            return profile;
         }
 
         function renderIngredientGrid() {
@@ -614,15 +635,59 @@
         document.getElementById('setupModeKibble').onclick = function () { setWizardMode('kibble'); };
         document.getElementById('setupSkip').onclick = skipWizard;
 
+        // Profile step: breed dropdown + date picker + radio/checkbox interactivity
+        document.getElementById('setupBreedBtn').onclick = function () {
+            showDropdown('Raça', BREED_OPTIONS, document.getElementById('setupBreed').value, function (value) {
+                document.getElementById('setupBreed').value = value;
+                document.getElementById('setupBreedBtn').textContent = value;
+                document.getElementById('setupBreedBtn').classList.add('has-value');
+            });
+        };
+        document.getElementById('setupBirthdayBtn').onclick = function () {
+            showDatePicker(function (dateStr) {
+                document.getElementById('setupBirthday').value = dateStr;
+                document.getElementById('setupBirthdayBtn').textContent = formatPickedDate(dateStr);
+                document.getElementById('setupBirthdayBtn').classList.add('has-value');
+            });
+        };
+        document.querySelectorAll('input[name="setupSex"]').forEach(function (r) {
+            r.addEventListener('change', function () {
+                document.querySelectorAll('input[name="setupSex"]').forEach(function (rb) {
+                    rb.closest('.dog-radio-label').classList.toggle('selected', rb.checked);
+                });
+            });
+        });
+        var setupNeuteredEl = document.getElementById('setupNeutered');
+        if (setupNeuteredEl) {
+            setupNeuteredEl.addEventListener('change', function () {
+                var lbl = setupNeuteredEl.closest('.dog-checkbox-label');
+                if (lbl) lbl.classList.toggle('checked', setupNeuteredEl.checked);
+            });
+        }
+
+        // Profile → Mode
+        document.getElementById('setupNextProfile').onclick = function () {
+            saveProfileToDB();
+            renderProgress(2, wizardMode === 'homemade' ? 4 : 3);
+            showStep('setupStep1');
+            saveOnboardingState();
+        };
+
+        // Mode → back to profile
+        document.getElementById('setupBackMode').onclick = function () {
+            renderProgress(1, wizardMode === 'homemade' ? 4 : 3);
+            showStep('setupStepProfile');
+            saveOnboardingState();
+        };
+
         document.getElementById('setupNext1').onclick = function () {
             if (wizardMode === 'homemade') {
-                renderProgress(2, 3);
+                renderProgress(3, 4);
                 renderIngredientGrid();
                 showStep('setupStep2Ingredients');
             } else {
-                renderProgress(2, 2);
+                renderProgress(3, 3);
                 showStep('setupStep2Kibble');
-                // Restore kibble form values if resuming
                 if (rd.kibble) {
                     document.getElementById('setupKibbleBrand').value = rd.kibble.brand || '';
                     if (rd.kibble.brand) {
@@ -643,7 +708,7 @@
 
         // Homemade flow
         document.getElementById('setupBackIng').onclick = function () {
-            renderProgress(1, 3);
+            renderProgress(2, 4);
             showStep('setupStep1');
             saveOnboardingState();
         };
@@ -652,15 +717,14 @@
                 showToast('Selecciona pelo menos um ingrediente');
                 return;
             }
-            renderProgress(3, 3);
+            renderProgress(4, 4);
             renderWizardRecipe();
             showStep('setupStep3Amounts');
             saveOnboardingState();
         };
         document.getElementById('setupBackAmounts').onclick = function () {
-            renderProgress(2, 3);
+            renderProgress(3, 4);
             showStep('setupStep2Ingredients');
-            // Sync recipe amounts back before going back
             wizardRecipe.forEach(function (item, idx) {
                 var input = document.querySelector('#setupRecipeList .recipe-ing-amount[data-idx="' + idx + '"]');
                 if (input) item.amount = parseFloat(input.value) || 0;
@@ -672,7 +736,7 @@
 
         // Kibble flow
         document.getElementById('setupBackKibble').onclick = function () {
-            renderProgress(1, 2);
+            renderProgress(2, 3);
             showStep('setupStep1');
             saveOnboardingState();
         };
@@ -690,17 +754,26 @@
         // Init / Resume
         setWizardMode(wizardMode);
 
+        // Restore profile form if resuming
+        if (rd.profile) restoreProfileForm(rd.profile);
+
         // Determine where to resume
-        if (currentStepId === 'setupStep2Ingredients') {
-            renderProgress(2, 3);
+        if (currentStepId === 'setupStep1') {
+            renderProgress(2, wizardMode === 'homemade' ? 4 : 3);
+            showStep('setupStep1');
+        } else if (currentStepId === 'setupStep2Ingredients') {
+            restoreProfileForm(wizardProfile);
+            renderProgress(3, 4);
             renderIngredientGrid();
             showStep('setupStep2Ingredients');
         } else if (currentStepId === 'setupStep3Amounts') {
-            renderProgress(3, 3);
+            restoreProfileForm(wizardProfile);
+            renderProgress(4, 4);
             renderWizardRecipe();
             showStep('setupStep3Amounts');
         } else if (currentStepId === 'setupStep2Kibble') {
-            renderProgress(2, 2);
+            restoreProfileForm(wizardProfile);
+            renderProgress(3, 3);
             showStep('setupStep2Kibble');
             if (rd.kibble) {
                 document.getElementById('setupKibbleBrand').value = rd.kibble.brand || '';
@@ -717,8 +790,9 @@
                 document.getElementById('setupKibbleCurrentKg').value = rd.kibble.currentKg || '0';
             }
         } else {
-            renderProgress(1, wizardMode === 'homemade' ? 3 : 2);
-            showStep('setupStep1');
+            // Default: profile step
+            renderProgress(1, 4);
+            showStep('setupStepProfile');
         }
     }
 
@@ -1603,13 +1677,6 @@
         });
 
         // Dropdown buttons
-        newDogBreedBtnEl.addEventListener('click', function () {
-            showDropdown('Raça', BREED_OPTIONS, newDogBreedEl.value, function (value) {
-                newDogBreedEl.value = value;
-                newDogBreedBtnEl.textContent = value;
-                newDogBreedBtnEl.classList.add('has-value');
-            });
-        });
         vetTypeBtnEl.addEventListener('click', function () {
             showDropdown('Tipo de Registo', VET_TYPE_OPTIONS, vetTypeEl.value, function (value, label) {
                 vetTypeEl.value = value;
@@ -1619,13 +1686,6 @@
         });
 
         // Date picker buttons
-        newDogBirthdayBtnEl.addEventListener('click', function () {
-            showDatePicker(function (dateStr) {
-                newDogBirthdayEl.value = dateStr;
-                newDogBirthdayBtnEl.textContent = formatPickedDate(dateStr);
-                newDogBirthdayBtnEl.classList.add('has-value');
-            });
-        });
         vetDateBtnEl.addEventListener('click', function () {
             showDatePicker(function (dateStr) {
                 vetDateEl.value = dateStr;
