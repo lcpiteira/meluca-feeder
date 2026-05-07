@@ -2837,6 +2837,11 @@ footer {
 }
 
 /* ========== App Tour ========== */
+body.tour-active {
+    overflow: hidden !important;
+    touch-action: none !important;
+}
+
 .tour-overlay {
     position: fixed;
     top: 0;
@@ -2844,7 +2849,8 @@ footer {
     right: 0;
     bottom: 0;
     z-index: 9000;
-    pointer-events: none;
+    pointer-events: auto;
+    overflow: hidden;
 }
 
 .tour-overlay::before {
@@ -2855,7 +2861,6 @@ footer {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.55);
-    pointer-events: auto;
 }
 
 .tour-spotlight {

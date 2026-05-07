@@ -1706,7 +1706,7 @@
         function positionSpotlight(el) {
             var rect = el.getBoundingClientRect();
             var pad = 8;
-            spotlight.style.top = (rect.top + window.scrollY - pad) + 'px';
+            spotlight.style.top = (rect.top - pad) + 'px';
             spotlight.style.left = (rect.left - pad) + 'px';
             spotlight.style.width = (rect.width + pad * 2) + 'px';
             spotlight.style.height = (rect.height + pad * 2) + 'px';
@@ -1719,19 +1719,19 @@
             var viewH = window.innerHeight;
 
             // Try below the element
-            var top = rect.bottom + window.scrollY + 16;
+            var top = rect.bottom + 16;
             var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
 
             // If below would go off screen, show above
             if (rect.bottom + tooltipRect.height + 32 > viewH) {
-                top = rect.top + window.scrollY - tooltipRect.height - 16;
+                top = rect.top - tooltipRect.height - 16;
             }
 
             // Clamp horizontal
             left = Math.max(16, Math.min(left, viewW - tooltipRect.width - 16));
 
-            // Clamp vertical (never go above page)
-            if (top < window.scrollY + 8) top = window.scrollY + 8;
+            // Clamp vertical (never go above viewport)
+            if (top < 8) top = 8;
 
             tooltip.style.top = top + 'px';
             tooltip.style.left = left + 'px';
@@ -1751,10 +1751,12 @@
                 return;
             }
 
-            // Scroll element into view
+            // Temporarily unlock scroll to allow scrollIntoView, then lock again
+            document.body.classList.remove('tour-active');
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
             setTimeout(function () {
+                document.body.classList.add('tour-active');
                 positionSpotlight(el);
                 content.innerHTML = '<h3>' + step.title + '</h3><p>' + step.text + '</p>';
                 counter.textContent = (idx + 1) + ' / ' + TOUR_STEPS.length;
@@ -1764,11 +1766,12 @@
                 requestAnimationFrame(function () {
                     positionTooltip(el);
                 });
-            }, 350);
+            }, 450);
         }
 
         function endTour() {
             overlay.style.display = 'none';
+            document.body.classList.remove('tour-active');
             if (currentDogId) {
                 db.ref('dogs/' + currentDogId + '/tourComplete/' + currentUser.uid).set(true);
             }
@@ -1805,6 +1808,7 @@
             }
         });
 
+        document.body.classList.add('tour-active');
         overlay.style.display = '';
         showStep(0);
     }
