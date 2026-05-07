@@ -4,7 +4,7 @@
     // === Firebase Config ===
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
-        authDomain: "melucafeeder.firebaseapp.com",
+        authDomain: "melucafeeder.web.app",
         databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "melucafeeder",
         storageBucket: "melucafeeder.firebasestorage.app",
