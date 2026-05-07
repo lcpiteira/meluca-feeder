@@ -1403,13 +1403,6 @@ section h2 {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 16px;
-    padding: 20px;
-    background: var(--bg-surface);
-    border: 2px solid var(--primary);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
-    animation: tour-tooltip-in 0.25s ease;
 }
 
 .vet-form-actions,
@@ -1417,6 +1410,7 @@ section h2 {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+    margin-top: 4px;
 }
 
 .vet-dates-row {

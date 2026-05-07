@@ -150,7 +150,7 @@
     const vetCostEl = document.getElementById('vetCost');
     const vetNotesEl = document.getElementById('vetNotes');
     const vetAddBtnEl = document.getElementById('vetAddBtn');
-    const vetFormEl = document.getElementById('vetForm');
+    const vetFormOverlayEl = document.getElementById('vetFormOverlay');
     const vetToggleFormBtnEl = document.getElementById('vetToggleFormBtn');
     const vetCancelBtnEl = document.getElementById('vetCancelBtn');
     const vetFilterBarEl = document.getElementById('vetFilterBar');
@@ -158,7 +158,7 @@
     const vetHistoryEl = document.getElementById('vetHistory');
     const healthNoteTextEl = document.getElementById('healthNoteText');
     const healthNoteBtnEl = document.getElementById('healthNoteBtn');
-    const healthNoteFormEl = document.getElementById('healthNoteForm');
+    const healthNoteFormOverlayEl = document.getElementById('healthNoteFormOverlay');
     const healthNoteToggleBtnEl = document.getElementById('healthNoteToggleBtn');
     const healthNoteCancelBtnEl = document.getElementById('healthNoteCancelBtn');
     const healthNotesListEl = document.getElementById('healthNotesList');
@@ -2044,23 +2044,19 @@
         kibbleShopBtnEl.addEventListener('click', handleKibbleShop);
         vetAddBtnEl.addEventListener('click', handleVetAdd);
         vetToggleFormBtnEl.addEventListener('click', function () {
-            vetFormEl.style.display = '';
-            vetToggleFormBtnEl.style.display = 'none';
-            vetDescEl.focus();
+            vetFormOverlayEl.style.display = '';
+            setTimeout(function () { vetDescEl.focus(); }, 100);
         });
         vetCancelBtnEl.addEventListener('click', function () {
-            vetFormEl.style.display = 'none';
-            vetToggleFormBtnEl.style.display = '';
+            vetFormOverlayEl.style.display = 'none';
         });
         healthNoteBtnEl.addEventListener('click', handleHealthNote);
         healthNoteToggleBtnEl.addEventListener('click', function () {
-            healthNoteFormEl.style.display = '';
-            healthNoteToggleBtnEl.style.display = 'none';
-            healthNoteTextEl.focus();
+            healthNoteFormOverlayEl.style.display = '';
+            setTimeout(function () { healthNoteTextEl.focus(); }, 100);
         });
         healthNoteCancelBtnEl.addEventListener('click', function () {
-            healthNoteFormEl.style.display = 'none';
-            healthNoteToggleBtnEl.style.display = '';
+            healthNoteFormOverlayEl.style.display = 'none';
         });
         healthNoteTextEl.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') handleHealthNote();
@@ -2366,8 +2362,7 @@
         var todayStr = new Date().toISOString().slice(0, 10);
         vetDateEl.value = todayStr;
         vetDateBtnEl.textContent = formatPickedDate(todayStr);
-        vetFormEl.style.display = 'none';
-        vetToggleFormBtnEl.style.display = '';
+        vetFormOverlayEl.style.display = 'none';
         showToast('Registo veterinário adicionado');
     }
 
@@ -2491,8 +2486,7 @@
 
         if (db && currentDogId) dogRef('healthNotes').push({ text: text, date: new Date().toISOString() });
         healthNoteTextEl.value = '';
-        healthNoteFormEl.style.display = 'none';
-        healthNoteToggleBtnEl.style.display = '';
+        healthNoteFormOverlayEl.style.display = 'none';
         showToast('Nota adicionada');
     }
 
