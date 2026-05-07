@@ -1516,12 +1516,19 @@ section h2 {
 
 .vet-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.85rem;
     gap: 8px;
+}
+
+.vet-item-desc {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .vet-item:last-child {
@@ -1847,6 +1854,25 @@ section h2 {
     font-size: 0.75rem;
     white-space: nowrap;
     margin-left: 12px;
+}
+
+/* Delete entry button */
+.btn-delete-entry {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px 6px;
+    opacity: 0.4;
+    transition: opacity 0.2s, transform 0.15s;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.btn-delete-entry:hover,
+.btn-delete-entry:active {
+    opacity: 1;
+    transform: scale(1.15);
 }
 
 /* Calendar */

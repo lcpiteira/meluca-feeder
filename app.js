@@ -2268,6 +2268,13 @@
         showToast('Registo veterinário adicionado');
     }
 
+    function deleteVetEntry(id, desc) {
+        showModal('Apagar "' + desc + '"?', function () {
+            if (db && currentDogId) dogRef('vet/' + id).remove();
+            showToast('Registo apagado');
+        });
+    }
+
     function renderVet() {
         var typeLabels = { consulta: '🩺 Consulta', vacina: '💉 Vacina', desparasitacao: '🪱 Desparasitação', outro: '📋 Outro' };
         var today = new Date().toISOString().slice(0, 10);
@@ -2275,11 +2282,17 @@
             .sort(function (a, b) { return a.nextDate.localeCompare(b.nextDate); });
 
         if (upcoming.length > 0) {
-            vetUpcomingEl.innerHTML = '<h3>Próximos</h3>' + upcoming.map(function (e) {
+            vetUpcomingEl.innerHTML = '<h3>Próximos</h3>';
+            upcoming.forEach(function (e) {
                 var d = e.nextDate.split('-');
-                return '<div class="vet-item upcoming"><span class="vet-type">' + (typeLabels[e.type] || e.type) +
-                    '</span><span>' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span></div>';
-            }).join('');
+                var div = document.createElement('div');
+                div.className = 'vet-item upcoming';
+                div.innerHTML = '<span class="vet-type">' + (typeLabels[e.type] || e.type) +
+                    '</span><span class="vet-item-desc">' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] +
+                    '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
+                div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteVetEntry(e.id, e.description); });
+                vetUpcomingEl.appendChild(div);
+            });
         } else {
             vetUpcomingEl.innerHTML = '';
         }
@@ -2288,11 +2301,17 @@
             vetHistoryEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
             return;
         }
-        vetHistoryEl.innerHTML = '<h3>Histórico</h3>' + vetData.slice(0, 20).map(function (e) {
+        vetHistoryEl.innerHTML = '<h3>Histórico</h3>';
+        vetData.slice(0, 20).forEach(function (e) {
             var d = e.date.split('-');
-            return '<div class="vet-item"><span class="vet-type">' + (typeLabels[e.type] || e.type) +
-                '</span><span>' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] + '</span></div>';
-        }).join('');
+            var div = document.createElement('div');
+            div.className = 'vet-item';
+            div.innerHTML = '<span class="vet-type">' + (typeLabels[e.type] || e.type) +
+                '</span><span class="vet-item-desc">' + escapeHtml(e.description) + '</span><span class="date">' + d[2] + '/' + d[1] + '/' + d[0] +
+                '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
+            div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteVetEntry(e.id, e.description); });
+            vetHistoryEl.appendChild(div);
+        });
     }
 
     function checkVetReminders() {
@@ -2328,15 +2347,28 @@
         showToast('Nota adicionada');
     }
 
+    function deleteHealthNote(id, text) {
+        showModal('Apagar nota "' + (text.length > 30 ? text.substring(0, 30) + '...' : text) + '"?', function () {
+            if (db && currentDogId) dogRef('healthNotes/' + id).remove();
+            showToast('Nota apagada');
+        });
+    }
+
     function renderHealthNotes() {
         if (healthNotes.length === 0) {
             healthNotesListEl.innerHTML = '<p class="empty-history">Sem notas de saúde</p>';
             return;
         }
-        healthNotesListEl.innerHTML = healthNotes.slice(0, 30).map(function (e) {
+        healthNotesListEl.innerHTML = '';
+        healthNotes.slice(0, 30).forEach(function (e) {
             var d = new Date(e.date);
-            return '<div class="health-note-item"><span class="health-note-text">' + escapeHtml(e.text) + '</span><span class="date">' + formatDateTime(d) + '</span></div>';
-        }).join('');
+            var div = document.createElement('div');
+            div.className = 'health-note-item';
+            div.innerHTML = '<span class="health-note-text">' + escapeHtml(e.text) + '</span><span class="date">' + formatDateTime(d) +
+                '</span><button class="btn-delete-entry" title="Apagar">🗑️</button>';
+            div.querySelector('.btn-delete-entry').addEventListener('click', function () { deleteHealthNote(e.id, e.text); });
+            healthNotesListEl.appendChild(div);
+        });
     }
 
     // === Heat Cycle ===
