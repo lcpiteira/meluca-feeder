@@ -35,6 +35,7 @@
     let userDogs = {};
     let firstLoad = true;
     let listeners = []; // Firebase listener refs for cleanup
+    let migrating = false; // Guard against double migration
 
     // === DOM: Auth ===
     const loadingScreenEl = document.getElementById('loadingScreen');
@@ -207,11 +208,15 @@
 
     // === Migration: Legacy data → Dog structure ===
     function checkAndMigrateLegacyData(user) {
+        if (migrating) return;
+        migrating = true;
+
         db.ref('state').once('value', function (snap) {
             if (snap.exists()) {
                 // Legacy data found — migrate to a new dog
                 migrateToNewDog(user, snap.val());
             } else {
+                migrating = false;
                 showDogsScreen();
             }
         });
@@ -250,9 +255,10 @@
                 'settings': null
             });
         }).then(function () {
+            migrating = false;
             showToast('Dados migrados com sucesso!');
-            showDogsScreen();
         }).catch(function (err) {
+            migrating = false;
             console.error('Migration error:', err);
             showToast('Erro na migração');
             showDogsScreen();

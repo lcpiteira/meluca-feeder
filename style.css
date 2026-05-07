@@ -95,6 +95,20 @@ body {
 }
 
 /* Login Screen */
+/* Loading Screen */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    z-index: 1000;
+}
+
 .login-screen {
     display: flex;
     align-items: center;
