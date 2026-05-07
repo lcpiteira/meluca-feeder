@@ -4,7 +4,7 @@
     // === Firebase Config ===
     const FIREBASE_CONFIG = {
         apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
-        authDomain: "melucafeeder.web.app",
+        authDomain: "melucafeeder.firebaseapp.com",
         databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
         projectId: "melucafeeder",
         storageBucket: "melucafeeder.firebasestorage.app",
@@ -100,8 +100,18 @@
         db = firebase.database();
         auth = firebase.auth();
 
+        // Handle redirect result (in case popup didn't communicate back)
+        auth.getRedirectResult().then(function (result) {
+            if (result.user) {
+                console.log('Got redirect result:', result.user.email);
+            }
+        }).catch(function (err) {
+            console.error('Redirect result error:', err);
+        });
+
         // Auth state listener
         auth.onAuthStateChanged(function (user) {
+            console.log('Auth state changed:', user ? user.email : 'null');
             if (user) {
                 currentUser = user;
                 onUserLoggedIn(user);
