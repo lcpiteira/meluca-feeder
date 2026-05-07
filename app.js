@@ -104,6 +104,9 @@
         db = firebase.database();
         auth = firebase.auth();
 
+        // Persist session across browser restarts (user stays logged in until explicit logout)
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
         // Handle redirect result (in case popup didn't communicate back)
         auth.getRedirectResult().then(function (result) {
             if (result.user) {
