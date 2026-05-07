@@ -280,7 +280,7 @@
         db.ref().update(updates).then(function () {
             newDogNameEl.value = '';
             showToast(name + ' criado!');
-            showDogsScreen();
+            // Dogs screen will refresh via the on('value') listener
         });
     }
 
@@ -311,7 +311,7 @@
             db.ref().update(updates).then(function () {
                 inviteCodeEl.value = '';
                 showToast('Juntaste-te com sucesso!');
-                showDogsScreen();
+                // Dogs screen will refresh via the on('value') listener
             });
         });
     }
@@ -336,8 +336,13 @@
         attachDogListeners(dogId);
     }
 
+    let dogsListRenderToken = 0;
+
     function renderDogsList() {
         var dogIds = Object.keys(userDogs);
+        dogsListRenderToken++;
+        var myToken = dogsListRenderToken;
+
         if (dogIds.length === 0) {
             dogsListEl.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Ainda não tens nenhum cão registado.</p>';
             return;
@@ -346,6 +351,9 @@
         dogsListEl.innerHTML = '';
         dogIds.forEach(function (id) {
             db.ref('dogs/' + id).once('value', function (snap) {
+                // Ignore if a newer render has been triggered
+                if (myToken !== dogsListRenderToken) return;
+
                 var dog = snap.val();
                 if (!dog) return;
 
