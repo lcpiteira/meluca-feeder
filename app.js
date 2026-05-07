@@ -87,9 +87,6 @@
     const createDogBtnEl = document.getElementById('createDogBtn');
     const inviteCodeEl = document.getElementById('inviteCode');
     const joinDogBtnEl = document.getElementById('joinDogBtn');
-    const createDogBtnEl = document.getElementById('createDogBtn');
-    const inviteCodeEl = document.getElementById('inviteCode');
-    const joinDogBtnEl = document.getElementById('joinDogBtn');
 
     // === DOM: App ===
     const stockCountEl = document.getElementById('stockCount');
