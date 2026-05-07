@@ -182,7 +182,10 @@
     const calendarGridEl = document.getElementById('calendarGrid');
 
     // === DOM: AI ===
-    const aiResponseEl = document.getElementById('aiResponse');
+    const aiFabEl = document.getElementById('aiFab');
+    const aiChatOverlayEl = document.getElementById('aiChatOverlay');
+    const aiChatCloseEl = document.getElementById('aiChatClose');
+    const aiChatMessagesEl = document.getElementById('aiChatMessages');
     const aiCustomPromptEl = document.getElementById('aiCustomPrompt');
     const aiAskBtnEl = document.getElementById('aiAskBtn');
 
@@ -268,6 +271,7 @@
         loginScreenEl.style.display = '';
         dogsScreenEl.style.display = 'none';
         appMainEl.style.display = 'none';
+        hideAiFab();
     }
 
     function showDogsScreen() {
@@ -275,6 +279,7 @@
         loginScreenEl.style.display = 'none';
         dogsScreenEl.style.display = '';
         appMainEl.style.display = 'none';
+        hideAiFab();
         renderDogsList();
     }
 
@@ -283,6 +288,7 @@
         loginScreenEl.style.display = 'none';
         dogsScreenEl.style.display = 'none';
         appMainEl.style.display = '';
+        showAiFab();
     }
 
     function onUserLoggedIn(user) {
@@ -2171,30 +2177,47 @@
         updatePrepMode();
         updateDashboardMode();
 
-        // AI event handlers
-        document.querySelectorAll('.btn-ai-prompt').forEach(function (btn) {
+        // AI chat handlers
+        if (aiFabEl) {
+            aiFabEl.addEventListener('click', function () {
+                aiChatOverlayEl.style.display = 'flex';
+                aiFabEl.style.display = 'none';
+                aiCustomPromptEl.focus();
+            });
+        }
+
+        if (aiChatCloseEl) {
+            aiChatCloseEl.addEventListener('click', closeAiChat);
+        }
+
+        if (aiChatOverlayEl) {
+            aiChatOverlayEl.addEventListener('click', function (e) {
+                if (e.target === aiChatOverlayEl) closeAiChat();
+            });
+        }
+
+        document.querySelectorAll('.ai-suggestion').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var promptKey = btn.getAttribute('data-prompt');
                 var prompt = AI_PROMPTS[promptKey];
-                if (prompt) askGemini(prompt);
+                var label = btn.textContent;
+                if (prompt) {
+                    addChatMessage(label, 'user');
+                    hideSuggestions();
+                    askGemini(prompt);
+                }
             });
         });
 
         if (aiAskBtnEl) {
-            aiAskBtnEl.addEventListener('click', function () {
-                var q = aiCustomPromptEl.value.trim();
-                if (q) {
-                    askGemini(q);
-                    aiCustomPromptEl.value = '';
-                }
-            });
+            aiAskBtnEl.addEventListener('click', sendChatMessage);
         }
 
         if (aiCustomPromptEl) {
             aiCustomPromptEl.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    aiAskBtnEl.click();
+                    sendChatMessage();
                 }
             });
         }
@@ -3158,7 +3181,7 @@
         lastTouchEnd = now;
     }, { passive: false });
 
-    // === AI (Gemini) ===
+    // === AI Chat (Gemini) ===
     function buildDogContext() {
         var dogName = appDogNameEl ? appDogNameEl.textContent : 'a cadela';
         var parts = [];
@@ -3227,18 +3250,77 @@
         'heat-prediction': 'Com base no histórico de ciclos de cio desta cadela, analisa a regularidade dos ciclos, prevê a data aproximada do próximo cio, e dá dicas de preparação.'
     };
 
-    function askGemini(userPrompt) {
-        if (GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY') {
-            aiResponseEl.innerHTML = '<p style="color: var(--danger);">⚠️ API key do Gemini não configurada. Edita a constante GEMINI_API_KEY no app.js com a tua key de <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--primary);">aistudio.google.com/apikey</a></p>';
-            return;
-        }
+    function showAiFab() {
+        if (aiFabEl) aiFabEl.style.display = 'flex';
+    }
 
+    function hideAiFab() {
+        if (aiFabEl) aiFabEl.style.display = 'none';
+    }
+
+    function closeAiChat() {
+        if (aiChatOverlayEl) aiChatOverlayEl.style.display = 'none';
+        showAiFab();
+    }
+
+    function addChatMessage(text, type) {
+        var div = document.createElement('div');
+        div.className = 'ai-msg ai-msg-' + type;
+        if (type === 'bot') {
+            div.innerHTML = text.split('\n').filter(function (l) { return l.trim(); }).map(function (p) { return '<p>' + escapeHtml(p) + '</p>'; }).join('');
+        } else if (type === 'user') {
+            div.textContent = text;
+        } else if (type === 'error') {
+            div.className = 'ai-msg ai-msg-bot';
+            div.innerHTML = '<p class="ai-msg-error">❌ ' + escapeHtml(text) + '</p>';
+        }
+        aiChatMessagesEl.appendChild(div);
+        aiChatMessagesEl.scrollTop = aiChatMessagesEl.scrollHeight;
+        return div;
+    }
+
+    function addLoadingMessage() {
+        var div = document.createElement('div');
+        div.className = 'ai-msg ai-msg-loading';
+        div.textContent = 'A pensar...';
+        div.id = 'aiLoadingMsg';
+        aiChatMessagesEl.appendChild(div);
+        aiChatMessagesEl.scrollTop = aiChatMessagesEl.scrollHeight;
+        return div;
+    }
+
+    function removeLoadingMessage() {
+        var el = document.getElementById('aiLoadingMsg');
+        if (el) el.remove();
+    }
+
+    function hideSuggestions() {
+        var el = document.getElementById('aiChatSuggestions');
+        if (el) el.style.display = 'none';
+    }
+
+    function sendChatMessage() {
+        var q = aiCustomPromptEl.value.trim();
+        if (!q) return;
+        addChatMessage(q, 'user');
+        hideSuggestions();
+        aiCustomPromptEl.value = '';
+        askGemini(q);
+    }
+
+    function setAiInputDisabled(disabled) {
+        if (aiAskBtnEl) aiAskBtnEl.disabled = disabled;
+        if (aiCustomPromptEl) aiCustomPromptEl.disabled = disabled;
+        document.querySelectorAll('.ai-suggestion').forEach(function (btn) { btn.disabled = disabled; });
+    }
+
+    function askGemini(userPrompt) {
         var context = buildDogContext();
         var systemPrompt = 'És um assistente veterinário virtual integrado na app MelucaFeeder. Respondes em português de Portugal (PT-PT). Sê conciso, prático e amigável. Não uses markdown. Usa parágrafos curtos. Nunca recomendas medicação sem consulta veterinária.';
         var fullPrompt = 'Contexto da cadela:\n' + context + '\n\nPedido: ' + userPrompt;
 
-        aiResponseEl.innerHTML = '<div class="ai-loading">A pensar...</div>';
-        setAiButtonsDisabled(true);
+        addLoadingMessage();
+        setAiInputDisabled(true);
 
         var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + GEMINI_API_KEY;
 
@@ -3264,21 +3346,19 @@
             return res.json();
         })
         .then(function (data) {
+            removeLoadingMessage();
             var text = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
             if (!text) throw new Error('Resposta vazia do Gemini');
-            aiResponseEl.innerHTML = text.split('\n').filter(function (l) { return l.trim(); }).map(function (p) { return '<p>' + escapeHtml(p) + '</p>'; }).join('');
+            addChatMessage(text, 'bot');
         })
         .catch(function (err) {
-            aiResponseEl.innerHTML = '<p style="color: var(--danger);">❌ ' + escapeHtml(err.message) + '</p>';
+            removeLoadingMessage();
+            addChatMessage(err.message, 'error');
         })
         .finally(function () {
-            setAiButtonsDisabled(false);
+            setAiInputDisabled(false);
+            aiCustomPromptEl.focus();
         });
-    }
-
-    function setAiButtonsDisabled(disabled) {
-        document.querySelectorAll('.btn-ai-prompt').forEach(function (btn) { btn.disabled = disabled; });
-        if (aiAskBtnEl) aiAskBtnEl.disabled = disabled;
     }
 
     // === Start ===

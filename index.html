@@ -95,7 +95,6 @@
                 <button class="tab" data-tab="weight">⚖️ Peso</button>
                 <button class="tab" data-tab="health">🏥 Saúde</button>
                 <button class="tab" data-tab="heat">🩸 Cio</button>
-                <button class="tab" data-tab="ai">✨ AI</button>
             </nav>
 
             <!-- Tab: Dashboard -->
@@ -326,27 +325,6 @@
                     </div>
                 </section>
             </div>
-
-            <!-- Tab: AI Insights -->
-            <div class="tab-content" id="tab-ai">
-                <section class="ai-section">
-                    <h2>✨ Insights AI</h2>
-                    <p class="ai-description">Análise inteligente dos dados da tua cadela, powered by Gemini.</p>
-                    <div class="ai-prompts">
-                        <button class="btn btn-ai-prompt" data-prompt="health-summary">🏥 Resumo de saúde</button>
-                        <button class="btn btn-ai-prompt" data-prompt="weight-analysis">⚖️ Análise de peso</button>
-                        <button class="btn btn-ai-prompt" data-prompt="feeding-tips">🍽️ Dicas de alimentação</button>
-                        <button class="btn btn-ai-prompt" data-prompt="heat-prediction">🩸 Previsão de cio</button>
-                    </div>
-                    <div class="ai-custom">
-                        <input type="text" id="aiCustomPrompt" placeholder="Faz uma pergunta sobre a tua cadela..." class="input">
-                        <button class="btn btn-primary" id="aiAskBtn">Perguntar</button>
-                    </div>
-                    <div class="ai-response" id="aiResponse">
-                        <p class="empty-history">Clica num botão ou faz uma pergunta para começar.</p>
-                    </div>
-                </section>
-            </div>
         </main>
 
         <footer>
@@ -357,6 +335,32 @@
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- AI Chat -->
+    <button class="ai-fab" id="aiFab" style="display: none;">✨</button>
+    <div class="ai-chat-overlay" id="aiChatOverlay" style="display: none;">
+        <div class="ai-chat">
+            <div class="ai-chat-header">
+                <span class="ai-chat-title">✨ Assistente AI</span>
+                <button class="ai-chat-close" id="aiChatClose">✕</button>
+            </div>
+            <div class="ai-chat-messages" id="aiChatMessages">
+                <div class="ai-msg ai-msg-bot">
+                    <p>Olá! Sou o assistente da MelucaFeeder. Escolhe uma opção rápida ou faz-me uma pergunta.</p>
+                </div>
+                <div class="ai-chat-suggestions" id="aiChatSuggestions">
+                    <button class="ai-suggestion" data-prompt="health-summary">🏥 Resumo de saúde</button>
+                    <button class="ai-suggestion" data-prompt="weight-analysis">⚖️ Análise de peso</button>
+                    <button class="ai-suggestion" data-prompt="feeding-tips">🍽️ Dicas de alimentação</button>
+                    <button class="ai-suggestion" data-prompt="heat-prediction">🩸 Previsão de cio</button>
+                </div>
+            </div>
+            <div class="ai-chat-input">
+                <input type="text" id="aiCustomPrompt" placeholder="Escreve uma pergunta..." class="input">
+                <button class="btn btn-primary ai-send-btn" id="aiAskBtn">➤</button>
+            </div>
+        </div>
+    </div>
 
     <!-- App Tour -->
     <div class="tour-overlay" id="tourOverlay" style="display: none;">
