@@ -608,6 +608,11 @@
             });
             overlay.style.display = 'none';
             showToast('Alimentação configurada!');
+
+            // Start app tour for first-time users
+            setTimeout(function () {
+                startTour();
+            }, 800);
         }
 
         function saveHomemade() {
@@ -1646,6 +1651,162 @@
             offline: '○ Apenas local'
         };
         syncStatusEl.textContent = labels[status] || '';
+    }
+
+    // === App Tour ===
+    var TOUR_STEPS = [
+        {
+            target: '.feeding-summary-card',
+            title: '📋 Modo de alimentação',
+            text: 'Aqui vês o tipo de alimentação configurado para o teu cão. Podes alterar nas definições a qualquer momento.'
+        },
+        {
+            target: '.stock-section',
+            title: '🍽️ Stock de refeições',
+            text: 'O coração da app. Mostra quantas refeições tens disponíveis e quando o stock se esgota.'
+        },
+        {
+            target: '#dashHomemadeActions, #dashKibbleActions',
+            title: '➕ Gerir stock',
+            text: 'Adiciona produção quando preparas refeições, ou faz ajustes manuais ao stock.'
+        },
+        {
+            target: '.tabs',
+            title: '🧭 Secções da app',
+            text: 'Navega entre o Dashboard, Preparação (calculadora e listas de compras), Peso, Saúde e Cio.'
+        },
+        {
+            target: '#settingsBtn',
+            title: '⚙️ Configurações',
+            text: 'Personaliza a receita, alertas, Telegram, perfil do cão e convida outros membros.'
+        }
+    ];
+
+    function startTour() {
+        var overlay = document.getElementById('tourOverlay');
+        var spotlight = document.getElementById('tourSpotlight');
+        var tooltip = document.getElementById('tourTooltip');
+        var content = document.getElementById('tourContent');
+        var counter = document.getElementById('tourCounter');
+        var nextBtn = document.getElementById('tourNext');
+        var skipBtn = document.getElementById('tourSkip');
+        if (!overlay) return;
+
+        var currentStep = 0;
+
+        function getVisibleTarget(selector) {
+            var selectors = selector.split(',').map(function (s) { return s.trim(); });
+            for (var i = 0; i < selectors.length; i++) {
+                var el = document.querySelector(selectors[i]);
+                if (el && el.offsetParent !== null && el.style.display !== 'none') return el;
+            }
+            return null;
+        }
+
+        function positionSpotlight(el) {
+            var rect = el.getBoundingClientRect();
+            var pad = 8;
+            spotlight.style.top = (rect.top + window.scrollY - pad) + 'px';
+            spotlight.style.left = (rect.left - pad) + 'px';
+            spotlight.style.width = (rect.width + pad * 2) + 'px';
+            spotlight.style.height = (rect.height + pad * 2) + 'px';
+        }
+
+        function positionTooltip(el) {
+            var rect = el.getBoundingClientRect();
+            var tooltipRect = tooltip.getBoundingClientRect();
+            var viewW = window.innerWidth;
+            var viewH = window.innerHeight;
+
+            // Try below the element
+            var top = rect.bottom + window.scrollY + 16;
+            var left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+            // If below would go off screen, show above
+            if (rect.bottom + tooltipRect.height + 32 > viewH) {
+                top = rect.top + window.scrollY - tooltipRect.height - 16;
+            }
+
+            // Clamp horizontal
+            left = Math.max(16, Math.min(left, viewW - tooltipRect.width - 16));
+
+            // Clamp vertical (never go above page)
+            if (top < window.scrollY + 8) top = window.scrollY + 8;
+
+            tooltip.style.top = top + 'px';
+            tooltip.style.left = left + 'px';
+        }
+
+        function showStep(idx) {
+            var step = TOUR_STEPS[idx];
+            var el = getVisibleTarget(step.target);
+            if (!el) {
+                // Skip invisible steps
+                if (idx < TOUR_STEPS.length - 1) {
+                    currentStep++;
+                    showStep(currentStep);
+                } else {
+                    endTour();
+                }
+                return;
+            }
+
+            // Scroll element into view
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            setTimeout(function () {
+                positionSpotlight(el);
+                content.innerHTML = '<h3>' + step.title + '</h3><p>' + step.text + '</p>';
+                counter.textContent = (idx + 1) + ' / ' + TOUR_STEPS.length;
+                nextBtn.textContent = idx === TOUR_STEPS.length - 1 ? 'Concluir' : 'Seguinte';
+
+                // Position tooltip after content rendered
+                requestAnimationFrame(function () {
+                    positionTooltip(el);
+                });
+            }, 350);
+        }
+
+        function endTour() {
+            overlay.style.display = 'none';
+            if (currentDogId) {
+                db.ref('dogs/' + currentDogId + '/tourComplete/' + currentUser.uid).set(true);
+            }
+        }
+
+        nextBtn.onclick = function () {
+            currentStep++;
+            if (currentStep >= TOUR_STEPS.length) {
+                endTour();
+            } else {
+                tooltip.style.animation = 'none';
+                tooltip.offsetHeight; // trigger reflow
+                tooltip.style.animation = '';
+                showStep(currentStep);
+            }
+        };
+
+        skipBtn.onclick = endTour;
+
+        // Also close on overlay background click
+        overlay.addEventListener('click', function (e) {
+            if (e.target === overlay) endTour();
+        });
+
+        // Reposition on resize
+        window.addEventListener('resize', function () {
+            if (overlay.style.display !== 'none') {
+                var step = TOUR_STEPS[currentStep];
+                var el = getVisibleTarget(step.target);
+                if (el) {
+                    positionSpotlight(el);
+                    positionTooltip(el);
+                }
+            }
+        });
+
+        overlay.style.display = '';
+        showStep(0);
     }
 
     // === Events ===

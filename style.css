@@ -2835,3 +2835,129 @@ footer {
         padding: 14px;
     }
 }
+
+/* ========== App Tour ========== */
+.tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9000;
+    pointer-events: none;
+}
+
+.tour-overlay::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: auto;
+}
+
+.tour-spotlight {
+    position: absolute;
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+    transition: top 0.4s ease, left 0.4s ease, width 0.4s ease, height 0.4s ease;
+    z-index: 9001;
+    pointer-events: none;
+}
+
+.tour-spotlight::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px solid var(--primary);
+    border-radius: inherit;
+    animation: tour-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tour-pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.01); }
+}
+
+.tour-tooltip {
+    position: absolute;
+    z-index: 9002;
+    background: var(--bg-surface);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius);
+    padding: 20px;
+    max-width: 320px;
+    width: calc(100vw - 32px);
+    box-shadow: 0 8px 32px rgba(99, 102, 241, 0.25);
+    pointer-events: auto;
+    animation: tour-tooltip-in 0.35s ease;
+}
+
+@keyframes tour-tooltip-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tour-tooltip-content h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.tour-tooltip-content p {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.tour-tooltip-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+}
+
+.tour-counter {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.tour-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.tour-btn {
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s, transform 0.15s;
+}
+
+.tour-btn:active {
+    transform: scale(0.96);
+}
+
+.tour-btn-skip {
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.tour-btn-skip:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.tour-btn-next {
+    background: var(--primary);
+    color: white;
+}
+
+.tour-btn-next:hover {
+    background: var(--primary-dark);
+}
