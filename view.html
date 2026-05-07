@@ -40,6 +40,7 @@
                 <button class="tab active" data-tab="v-dashboard">📊 Dashboard</button>
                 <button class="tab" data-tab="v-weight">⚖️ Peso</button>
                 <button class="tab" data-tab="v-health">🏥 Saúde</button>
+                <button class="tab" data-tab="v-heat">🔴 Cio</button>
             </nav>
 
             <!-- Dashboard -->
@@ -84,6 +85,19 @@
                 <section class="health-notes-section">
                     <h2>Notas de Saúde</h2>
                     <div class="health-notes-list" id="vHealthNotesList"></div>
+                </section>
+            </div>
+
+            <!-- Cio -->
+            <div class="tab-content" id="tab-v-heat">
+                <section class="heat-section">
+                    <h2>Ciclo de Cio</h2>
+                    <div class="heat-status" id="vHeatStatus"></div>
+                    <div class="heat-timeline" id="vHeatTimeline"></div>
+                    <div class="heat-prediction" id="vHeatPrediction"></div>
+                    <div class="heat-calendar" id="vHeatCalendar"></div>
+                    <h3 style="margin-top: 24px; font-size: 0.85rem;">Histórico</h3>
+                    <div class="heat-history" id="vHeatHistory"></div>
                 </section>
             </div>
 

@@ -14,6 +14,13 @@
     if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     var db = firebase.database();
 
+    var HEAT_BLEED_DAYS = 9;
+    var HEAT_FERTILE_END = 15;
+    var HEAT_CYCLE_INTERVAL = 180;
+
+    var heatCycles = [];
+    var weightDataCache = [];
+
     var loadingEl = document.getElementById('loadingScreen');
     var errorEl = document.getElementById('errorScreen');
     var errorMsgEl = document.getElementById('errorMessage');
@@ -98,6 +105,14 @@
             renderHealthNotes(list);
         });
 
+        // Load heat cycles
+        db.ref('dogs/' + dogId + '/heatCycles').on('value', function (snap) {
+            var data = snap.val();
+            heatCycles = data ? Object.entries(data).map(function (e) { return Object.assign({ id: e[0] }, e[1]); }) : [];
+            heatCycles.sort(function (a, b) { return new Date(b.startDate) - new Date(a.startDate); });
+            renderViewHeatCycle();
+        });
+
         // Show app
         loadingEl.style.display = 'none';
         viewMainEl.style.display = '';
@@ -109,6 +124,11 @@
                 document.querySelectorAll('.tab-content').forEach(function (c) { c.classList.remove('active'); });
                 tab.classList.add('active');
                 document.getElementById('tab-' + tab.getAttribute('data-tab')).classList.add('active');
+
+                // Redraw chart when weight tab becomes visible
+                if (tab.getAttribute('data-tab') === 'v-weight' && weightDataCache.length >= 2) {
+                    setTimeout(function () { drawViewChart(weightDataCache); }, 50);
+                }
             });
         });
     }
@@ -153,6 +173,7 @@
     function renderWeight(list) {
         var lastEl = document.getElementById('vWeightLast');
         var histEl = document.getElementById('vWeightHistory');
+        weightDataCache = list;
 
         if (list.length === 0) {
             lastEl.innerHTML = '<p class="empty-history">Sem registos de peso</p>';
@@ -267,6 +288,188 @@
         }).join('');
     }
 
+    // === Heat Cycle Rendering ===
+    function renderViewHeatCycle() {
+        var activeCycle = heatCycles.find(function (c) { return !c.endDate; });
+        var lastCompleted = heatCycles.find(function (c) { return !!c.endDate; });
+
+        renderViewHeatStatus(activeCycle, lastCompleted);
+        renderViewHeatTimeline(activeCycle, lastCompleted);
+        renderViewHeatCalendar(activeCycle);
+        renderViewHeatHistory();
+        renderViewHeatPrediction(lastCompleted);
+    }
+
+    function renderViewHeatStatus(activeCycle, lastCompleted) {
+        var el = document.getElementById('vHeatStatus');
+        if (activeCycle) {
+            var start = new Date(activeCycle.startDate);
+            var today = new Date();
+            var daysSinceStart = Math.floor((today - start) / 86400000);
+
+            var phase, phaseClass;
+            if (daysSinceStart < HEAT_BLEED_DAYS) {
+                phase = '🩸 Sangramento (Proestro)';
+                phaseClass = 'bleeding';
+            } else if (daysSinceStart < HEAT_FERTILE_END) {
+                phase = '⚠️ Período Fértil (Estro)';
+                phaseClass = 'fertile';
+            } else {
+                phase = '💜 Pós-cio (Diestro)';
+                phaseClass = 'diestrus';
+            }
+
+            var colors = { bleeding: '#ef4444', fertile: '#f59e0b', diestrus: '#6366f1' };
+            el.innerHTML = '<div class="heat-status-card" style="border-color:' + (colors[phaseClass] || '#64748b') + '">' +
+                '<div class="heat-status-phase">' + phase + '</div>' +
+                '<div class="heat-status-detail">Dia ' + (daysSinceStart + 1) + ' desde início (' + formatDate(start) + ')</div>' +
+                '</div>';
+        } else if (lastCompleted) {
+            var lastStart = new Date(lastCompleted.startDate);
+            var daysSince = Math.floor((new Date() - lastStart) / 86400000);
+            el.innerHTML = '<div class="heat-status-card">' +
+                '<div class="heat-status-phase">😴 Anestro (Repouso)</div>' +
+                '<div class="heat-status-detail">' + daysSince + ' dias desde o último cio</div>' +
+                '</div>';
+        } else {
+            el.innerHTML = '<div class="heat-status-card">' +
+                '<div class="heat-status-phase">Sem registos</div>' +
+                '<div class="heat-status-detail">Ainda não há registos de cio</div>' +
+                '</div>';
+        }
+    }
+
+    function renderViewHeatTimeline(activeCycle, lastCompleted) {
+        var el = document.getElementById('vHeatTimeline');
+        var cycle = activeCycle || lastCompleted;
+        if (!cycle) { el.innerHTML = ''; return; }
+
+        var bleedDays = HEAT_BLEED_DAYS;
+        if (cycle.endDate) {
+            bleedDays = Math.max(1, Math.floor((new Date(cycle.endDate) - new Date(cycle.startDate)) / 86400000));
+        }
+        var fertileDays = HEAT_FERTILE_END - bleedDays;
+        if (fertileDays < 1) fertileDays = 6;
+        var diestrusDays = 60;
+
+        el.innerHTML = '<div class="heat-phase-bar">' +
+            '<div class="heat-phase-segment bleeding" style="flex:' + bleedDays + '">Sangramento (' + bleedDays + 'd)</div>' +
+            '<div class="heat-phase-segment fertile" style="flex:' + fertileDays + '">Fértil (' + fertileDays + 'd)</div>' +
+            '<div class="heat-phase-segment diestrus" style="flex:' + diestrusDays + '">Diestro (' + diestrusDays + 'd)</div>' +
+            '</div>' +
+            '<div class="heat-phase-legend">' +
+            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#ef4444"></span> Sangramento</span>' +
+            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#f59e0b"></span> Fértil</span>' +
+            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#6366f1"></span> Diestro</span>' +
+            '</div>';
+    }
+
+    function renderViewHeatCalendar(activeCycle) {
+        var el = document.getElementById('vHeatCalendar');
+        var cycle = activeCycle || (heatCycles.length > 0 ? heatCycles[0] : null);
+        if (!cycle) { el.innerHTML = ''; return; }
+
+        var start = new Date(cycle.startDate);
+        var bleedEnd = cycle.endDate ? new Date(cycle.endDate) : addDays(start, HEAT_BLEED_DAYS);
+        var fertileEnd = addDays(bleedEnd, HEAT_FERTILE_END - HEAT_BLEED_DAYS);
+
+        var calStart = new Date(start.getFullYear(), start.getMonth(), 1);
+        var calEnd = new Date(start.getFullYear(), start.getMonth() + 2, 0);
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        var months = [];
+        var d = new Date(calStart);
+        while (d <= calEnd) {
+            var m = d.getMonth();
+            if (!months.length || months[months.length - 1].month !== m) {
+                months.push({ month: m, year: d.getFullYear(), days: [] });
+            }
+            var cls = 'heat-cal-day';
+            var dd = new Date(d);
+            dd.setHours(0, 0, 0, 0);
+            if (dd >= start && dd < bleedEnd) cls += ' bleeding';
+            else if (dd >= bleedEnd && dd < fertileEnd) cls += ' fertile';
+            else if (dd >= fertileEnd && dd < addDays(start, 75)) cls += ' diestrus';
+            if (dd.getTime() === today.getTime()) cls += ' today';
+            months[months.length - 1].days.push({ date: new Date(d), cls: cls });
+            d.setDate(d.getDate() + 1);
+        }
+
+        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        var weekdays = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+
+        var html = '';
+        months.forEach(function (mo) {
+            html += '<div class="heat-cal-header"><span>' + monthNames[mo.month] + ' ' + mo.year + '</span></div>';
+            html += '<div class="heat-cal-grid">';
+            weekdays.forEach(function (w) { html += '<span class="heat-cal-weekday">' + w + '</span>'; });
+            var firstDow = (mo.days[0].date.getDay() + 6) % 7;
+            for (var i = 0; i < firstDow; i++) html += '<span class="heat-cal-day empty"></span>';
+            mo.days.forEach(function (day) {
+                html += '<span class="' + day.cls + '">' + day.date.getDate() + '</span>';
+            });
+            html += '</div>';
+        });
+
+        el.innerHTML = html;
+    }
+
+    function renderViewHeatHistory() {
+        var el = document.getElementById('vHeatHistory');
+        if (heatCycles.length === 0) {
+            el.innerHTML = '<p class="empty-history">Sem registos</p>';
+            return;
+        }
+        el.innerHTML = heatCycles.map(function (c) {
+            var start = formatDate(new Date(c.startDate));
+            var end = c.endDate ? formatDate(new Date(c.endDate)) : 'em curso';
+            var duration = '';
+            if (c.endDate) {
+                var days = Math.floor((new Date(c.endDate) - new Date(c.startDate)) / 86400000);
+                duration = days + ' dias de sangramento';
+            }
+            return '<div class="heat-history-item">' +
+                '<span class="heat-history-dates">' + start + ' → ' + end + '</span>' +
+                '<span class="heat-history-duration">' + duration + '</span>' +
+                '</div>';
+        }).join('');
+    }
+
+    function renderViewHeatPrediction(lastCompleted) {
+        var el = document.getElementById('vHeatPrediction');
+        if (!lastCompleted) { el.innerHTML = ''; return; }
+
+        var intervals = [];
+        for (var i = 0; i < heatCycles.length - 1; i++) {
+            if (heatCycles[i].startDate && heatCycles[i + 1].startDate) {
+                var diff = Math.abs(new Date(heatCycles[i].startDate) - new Date(heatCycles[i + 1].startDate));
+                intervals.push(Math.floor(diff / 86400000));
+            }
+        }
+        var avgInterval = intervals.length > 0
+            ? Math.round(intervals.reduce(function (a, b) { return a + b; }, 0) / intervals.length)
+            : HEAT_CYCLE_INTERVAL;
+
+        var lastStart = new Date(heatCycles[0].startDate);
+        if (!heatCycles[0].endDate) { el.innerHTML = ''; return; }
+
+        var nextDate = addDays(lastStart, avgInterval);
+        var daysUntil = Math.floor((nextDate - new Date()) / 86400000);
+
+        var html = '<div class="heat-next-prediction">';
+        if (daysUntil > 0) {
+            html += '📅 Próximo cio previsto: <strong>' + formatDate(nextDate) + '</strong> (daqui a ~' + daysUntil + ' dias)';
+        } else {
+            html += '⚠️ Próximo cio previsto para <strong>' + formatDate(nextDate) + '</strong> (pode estar atrasado)';
+        }
+        if (intervals.length > 0) {
+            html += '<br><span style="font-size:0.75rem;color:var(--text-muted)">Intervalo médio: ' + avgInterval + ' dias</span>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    }
+
     // === Helpers ===
     function formatDate(d) {
         return d.getDate() + '/' + (d.getMonth() + 1) + '/' + d.getFullYear();
@@ -281,5 +484,11 @@
         var div = document.createElement('div');
         div.textContent = str || '';
         return div.innerHTML;
+    }
+
+    function addDays(date, days) {
+        var d = new Date(date);
+        d.setDate(d.getDate() + days);
+        return d;
     }
 })();
