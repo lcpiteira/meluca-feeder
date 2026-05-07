@@ -1,17 +1,7 @@
-(function () {
+﻿(function () {
     'use strict';
 
-    var FIREBASE_CONFIG = {
-        apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
-        authDomain: "melucafeeder.firebaseapp.com",
-        databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "melucafeeder",
-        storageBucket: "melucafeeder.firebasestorage.app",
-        messagingSenderId: "314126208675",
-        appId: "1:314126208675:web:424edf29c499aa168db916"
-    };
-
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    if (!firebase.apps.length) firebase.initializeApp(MelucaShared.FIREBASE_CONFIG);
     var db = firebase.database();
 
     var HEAT_BLEED_DAYS = 9;
@@ -32,7 +22,7 @@
     var token = params.get('t');
 
     if (!token) {
-        showError('Link inválido.');
+        showError('Link invÃ¡lido.');
         return;
     }
 
@@ -40,7 +30,7 @@
     db.ref('shares/' + token).once('value', function (snap) {
         var share = snap.val();
         if (!share) {
-            showError('Link inválido ou já não existe.');
+            showError('Link invÃ¡lido ou jÃ¡ nÃ£o existe.');
             return;
         }
         if (share.expiresAt && share.expiresAt < Date.now()) {
@@ -61,7 +51,7 @@
         // Load dog name + profile (check sex for heat tab)
         db.ref('dogs/' + dogId).once('value', function (snap) {
             var dog = snap.val() || {};
-            dogNameEl.textContent = '🐶 ' + (dog.name || 'Cão');
+            dogNameEl.textContent = 'ðŸ¶ ' + (dog.name || 'CÃ£o');
             var p = dog.profile || {};
             if (p.sex === 'M') {
                 var heatTab = document.querySelector('.tab[data-tab="heat"]');
@@ -149,17 +139,17 @@
 
         el.textContent = state.stock || 0;
         el.className = 'stock-number';
-        if (state.stock <= 2) { el.classList.add('danger'); statusEl.textContent = 'Stock crítico'; statusEl.style.color = '#ef4444'; }
+        if (state.stock <= 2) { el.classList.add('danger'); statusEl.textContent = 'Stock crÃ­tico'; statusEl.style.color = '#ef4444'; }
         else if (state.stock <= 5) { el.classList.add('warning'); statusEl.textContent = 'Stock baixo'; statusEl.style.color = '#f59e0b'; }
         else { statusEl.textContent = 'Stock OK'; statusEl.style.color = '#10b981'; }
 
         if (state.stock <= 0) {
-            ruptureEl.innerHTML = '<span class="rupture-danger">Sem stock disponível</span>';
+            ruptureEl.innerHTML = '<span class="rupture-danger">Sem stock disponÃ­vel</span>';
         } else {
             var daysLeft = state.stock / 2;
             var ruptureDate = new Date();
             ruptureDate.setDate(ruptureDate.getDate() + Math.floor(daysLeft));
-            ruptureEl.innerHTML = '<span class="rupture-ok">Stock dura até ~' + formatDate(ruptureDate) + ' (' + Math.floor(daysLeft) + ' dias)</span>';
+            ruptureEl.innerHTML = '<span class="rupture-ok">Stock dura atÃ© ~' + formatDate(ruptureDate) + ' (' + Math.floor(daysLeft) + ' dias)</span>';
         }
     }
 
@@ -171,7 +161,7 @@
         }
         el.innerHTML = list.slice(0, 20).map(function (e) {
             var d = new Date(e.date);
-            var icon = e.type === 'add' ? '📦' : (e.type === 'auto' ? '🤖' : '✋');
+            var icon = e.type === 'add' ? 'ðŸ“¦' : (e.type === 'auto' ? 'ðŸ¤–' : 'âœ‹');
             return '<div class="history-item"><span class="hist-icon">' + icon + '</span>' +
                 '<span class="hist-desc">' + escapeHtml(e.description) + '</span>' +
                 '<span class="hist-date">' + formatDateTime(d) + '</span></div>';
@@ -190,7 +180,7 @@
         }
 
         var last = list[list.length - 1];
-        lastEl.innerHTML = 'Último peso: <strong>' + last.weight + ' kg</strong> (' + formatDate(new Date(last.date)) + ')';
+        lastEl.innerHTML = 'Ãšltimo peso: <strong>' + last.weight + ' kg</strong> (' + formatDate(new Date(last.date)) + ')';
 
         // Chart
         if (list.length >= 2) {
@@ -260,18 +250,18 @@
     function renderVet(list) {
         var upcomingEl = document.getElementById('vVetUpcoming');
         var histEl = document.getElementById('vVetHistory');
-        var typeIcons = { consulta: '🩺', vacina: '💉', desparasitacao: '💊', cirurgia: '🏥', analises: '🔬', medicacao: '💊', outro: '📋' };
+        var typeIcons = { consulta: 'ðŸ©º', vacina: 'ðŸ’‰', desparasitacao: 'ðŸ’Š', cirurgia: 'ðŸ¥', analises: 'ðŸ”¬', medicacao: 'ðŸ’Š', outro: 'ðŸ“‹' };
 
         var now = new Date();
         var upcoming = list.filter(function (e) { return e.nextDate && new Date(e.nextDate) >= now; });
         var past = list.filter(function (e) { return !e.nextDate || new Date(e.nextDate) < now; });
 
         if (upcoming.length > 0) {
-            upcomingEl.innerHTML = '<h3 style="font-size: 0.75rem; color: var(--warning); margin-bottom: 8px;">PRÓXIMAS DATAS</h3>' +
+            upcomingEl.innerHTML = '<h3 style="font-size: 0.75rem; color: var(--warning); margin-bottom: 8px;">PRÃ“XIMAS DATAS</h3>' +
                 upcoming.map(function (e) {
-                    var icon = typeIcons[e.type] || '📋';
-                    var detail = e.clinic ? ' · 📍 ' + escapeHtml(e.clinic) : '';
-                    return '<div class="vet-item-card upcoming"><div class="vet-item-header"><span>📅 ' + icon + ' ' + escapeHtml(e.description || e.type) +
+                    var icon = typeIcons[e.type] || 'ðŸ“‹';
+                    var detail = e.clinic ? ' Â· ðŸ“ ' + escapeHtml(e.clinic) : '';
+                    return '<div class="vet-item-card upcoming"><div class="vet-item-header"><span>ðŸ“… ' + icon + ' ' + escapeHtml(e.description || e.type) +
                         '</span><span class="date">' + formatDate(new Date(e.nextDate)) + '</span></div>' +
                         (detail ? '<div class="vet-item-details">' + detail + '</div>' : '') + '</div>';
                 }).join('');
@@ -280,14 +270,14 @@
         }
 
         if (past.length === 0) {
-            histEl.innerHTML = '<p class="empty-history">Sem registos veterinários</p>';
+            histEl.innerHTML = '<p class="empty-history">Sem registos veterinÃ¡rios</p>';
         } else {
             histEl.innerHTML = past.slice(0, 15).map(function (e) {
-                var icon = typeIcons[e.type] || '📋';
+                var icon = typeIcons[e.type] || 'ðŸ“‹';
                 var details = [];
-                if (e.clinic) details.push('📍 ' + escapeHtml(e.clinic));
-                if (e.cost != null) details.push('💰 ' + e.cost.toFixed(2) + ' €');
-                if (e.notes) details.push('📝 ' + escapeHtml(e.notes));
+                if (e.clinic) details.push('ðŸ“ ' + escapeHtml(e.clinic));
+                if (e.cost != null) details.push('ðŸ’° ' + e.cost.toFixed(2) + ' â‚¬');
+                if (e.notes) details.push('ðŸ“ ' + escapeHtml(e.notes));
                 var detailHtml = details.length > 0 ? '<div class="vet-item-details"><span>' + details.join('</span><span>') + '</span></div>' : '';
                 return '<div class="vet-item-card"><div class="vet-item-header"><span>' + icon + ' ' + escapeHtml(e.description || '') +
                     '</span><span class="date">' + formatDate(new Date(e.date)) + '</span></div>' + detailHtml + '</div>';
@@ -298,7 +288,7 @@
     function renderHealthNotes(list) {
         var el = document.getElementById('vHealthNotesList');
         if (list.length === 0) {
-            el.innerHTML = '<p class="empty-history">Sem notas de saúde</p>';
+            el.innerHTML = '<p class="empty-history">Sem notas de saÃºde</p>';
             return;
         }
         el.innerHTML = list.slice(0, 20).map(function (e) {
@@ -327,32 +317,32 @@
 
             var phase, phaseClass;
             if (daysSinceStart < HEAT_BLEED_DAYS) {
-                phase = '🩸 Sangramento (Proestro)';
+                phase = 'ðŸ©¸ Sangramento (Proestro)';
                 phaseClass = 'bleeding';
             } else if (daysSinceStart < HEAT_FERTILE_END) {
-                phase = '⚠️ Período Fértil (Estro)';
+                phase = 'âš ï¸ PerÃ­odo FÃ©rtil (Estro)';
                 phaseClass = 'fertile';
             } else {
-                phase = '💜 Pós-cio (Diestro)';
+                phase = 'ðŸ’œ PÃ³s-cio (Diestro)';
                 phaseClass = 'diestrus';
             }
 
             var colors = { bleeding: '#ef4444', fertile: '#f59e0b', diestrus: '#6366f1' };
             el.innerHTML = '<div class="heat-status-card" style="border-color:' + (colors[phaseClass] || '#64748b') + '">' +
                 '<div class="heat-status-phase">' + phase + '</div>' +
-                '<div class="heat-status-detail">Dia ' + (daysSinceStart + 1) + ' desde início (' + formatDate(start) + ')</div>' +
+                '<div class="heat-status-detail">Dia ' + (daysSinceStart + 1) + ' desde inÃ­cio (' + formatDate(start) + ')</div>' +
                 '</div>';
         } else if (lastCompleted) {
             var lastStart = new Date(lastCompleted.startDate);
             var daysSince = Math.floor((new Date() - lastStart) / 86400000);
             el.innerHTML = '<div class="heat-status-card">' +
-                '<div class="heat-status-phase">😴 Anestro (Repouso)</div>' +
-                '<div class="heat-status-detail">' + daysSince + ' dias desde o último cio</div>' +
+                '<div class="heat-status-phase">ðŸ˜´ Anestro (Repouso)</div>' +
+                '<div class="heat-status-detail">' + daysSince + ' dias desde o Ãºltimo cio</div>' +
                 '</div>';
         } else {
             el.innerHTML = '<div class="heat-status-card">' +
                 '<div class="heat-status-phase">Sem registos</div>' +
-                '<div class="heat-status-detail">Ainda não há registos de cio</div>' +
+                '<div class="heat-status-detail">Ainda nÃ£o hÃ¡ registos de cio</div>' +
                 '</div>';
         }
     }
@@ -372,12 +362,12 @@
 
         el.innerHTML = '<div class="heat-phase-bar">' +
             '<div class="heat-phase-segment bleeding" style="flex:' + bleedDays + '">Sangramento (' + bleedDays + 'd)</div>' +
-            '<div class="heat-phase-segment fertile" style="flex:' + fertileDays + '">Fértil (' + fertileDays + 'd)</div>' +
+            '<div class="heat-phase-segment fertile" style="flex:' + fertileDays + '">FÃ©rtil (' + fertileDays + 'd)</div>' +
             '<div class="heat-phase-segment diestrus" style="flex:' + diestrusDays + '">Diestro (' + diestrusDays + 'd)</div>' +
             '</div>' +
             '<div class="heat-phase-legend">' +
             '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#ef4444"></span> Sangramento</span>' +
-            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#f59e0b"></span> Fértil</span>' +
+            '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#f59e0b"></span> FÃ©rtil</span>' +
             '<span class="heat-legend-item"><span class="heat-legend-dot" style="background:#6366f1"></span> Diestro</span>' +
             '</div>';
     }
@@ -414,7 +404,7 @@
             d.setDate(d.getDate() + 1);
         }
 
-        var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        var monthNames = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         var weekdays = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
         var html = '';
@@ -448,7 +438,7 @@
                 duration = days + ' dias de sangramento';
             }
             return '<div class="heat-history-item">' +
-                '<span class="heat-history-dates">' + start + ' → ' + end + '</span>' +
+                '<span class="heat-history-dates">' + start + ' â†’ ' + end + '</span>' +
                 '<span class="heat-history-duration">' + duration + '</span>' +
                 '</div>';
         }).join('');
@@ -477,12 +467,12 @@
 
         var html = '<div class="heat-next-prediction">';
         if (daysUntil > 0) {
-            html += '📅 Próximo cio previsto: <strong>' + formatDate(nextDate) + '</strong> (daqui a ~' + daysUntil + ' dias)';
+            html += 'ðŸ“… PrÃ³ximo cio previsto: <strong>' + formatDate(nextDate) + '</strong> (daqui a ~' + daysUntil + ' dias)';
         } else {
-            html += '⚠️ Próximo cio previsto para <strong>' + formatDate(nextDate) + '</strong> (pode estar atrasado)';
+            html += 'âš ï¸ PrÃ³ximo cio previsto para <strong>' + formatDate(nextDate) + '</strong> (pode estar atrasado)';
         }
         if (intervals.length > 0) {
-            html += '<br><span style="font-size:0.75rem;color:var(--text-muted)">Intervalo médio: ' + avgInterval + ' dias</span>';
+            html += '<br><span style="font-size:0.75rem;color:var(--text-muted)">Intervalo mÃ©dio: ' + avgInterval + ' dias</span>';
         }
         html += '</div>';
         el.innerHTML = html;

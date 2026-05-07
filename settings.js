@@ -1,38 +1,14 @@
-(function () {
+﻿(function () {
     'use strict';
 
-    const SETTINGS_KEY = 'melucafeeder_settings';
+    // === Shared references ===
+    var FIREBASE_CONFIG = MelucaShared.FIREBASE_CONFIG;
+    var INGREDIENT_POOL = MelucaShared.INGREDIENT_POOL;
+    var initAvatarPicker = MelucaShared.initAvatarPicker;
+    var setAvatarPreview = MelucaShared.setAvatarPreview;
+    var getAvatarFromPicker = MelucaShared.getAvatarFromPicker;
 
-    var INGREDIENT_POOL = [
-        { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
-        { id: 'turkey', name: 'Peru', icon: '🦃', unit: 'g' },
-        { id: 'beef', name: 'Vaca', icon: '🥩', unit: 'g' },
-        { id: 'pork', name: 'Porco', icon: '🥓', unit: 'g' },
-        { id: 'fish', name: 'Peixe', icon: '🐟', unit: 'g' },
-        { id: 'liver', name: 'Fígado', icon: '🫀', unit: 'g' },
-        { id: 'tripe', name: 'Dobrada', icon: '🫘', unit: 'g' },
-        { id: 'rice', name: 'Arroz', icon: '🍚', unit: 'g' },
-        { id: 'pasta', name: 'Massa', icon: '🍝', unit: 'g' },
-        { id: 'oats', name: 'Aveia', icon: '🌾', unit: 'g' },
-        { id: 'sweet_potato', name: 'Batata-doce', icon: '🍠', unit: 'g' },
-        { id: 'potato', name: 'Batata', icon: '🥔', unit: 'g' },
-        { id: 'peas', name: 'Ervilhas', icon: '🫛', unit: 'g' },
-        { id: 'carrot', name: 'Cenoura', icon: '🥕', unit: 'g' },
-        { id: 'broccoli', name: 'Brócolos', icon: '🥦', unit: 'g' },
-        { id: 'spinach', name: 'Espinafres', icon: '🥬', unit: 'g' },
-        { id: 'pumpkin', name: 'Abóbora', icon: '🎃', unit: 'g' },
-        { id: 'zucchini', name: 'Courgette', icon: '🥒', unit: 'g' },
-        { id: 'green_beans', name: 'Feijão verde', icon: '🫘', unit: 'g' },
-        { id: 'apple', name: 'Maçã', icon: '🍎', unit: 'g' },
-        { id: 'banana', name: 'Banana', icon: '🍌', unit: 'g' },
-        { id: 'blueberry', name: 'Mirtilo', icon: '🫐', unit: 'g' },
-        { id: 'egg', name: 'Ovo', icon: '🥚', unit: 'un' },
-        { id: 'oil', name: 'Azeite', icon: '🫒', unit: 'ml' },
-        { id: 'coconut_oil', name: 'Óleo de coco', icon: '🥥', unit: 'ml' },
-        { id: 'supplement', name: 'Suplemento', icon: '💊', unit: 'g' },
-        { id: 'yogurt', name: 'Iogurte natural', icon: '🥛', unit: 'g' },
-        { id: 'cheese', name: 'Queijo fresco', icon: '🧀', unit: 'g' }
-    ];
+    var SETTINGS_KEY = 'melucafeeder_settings';
 
     var currentRecipe = [];
 
@@ -65,50 +41,40 @@
     ];
 
     var KIBBLE_LIFE_STAGES = [
-        { value: 'puppy', label: '🐶 Puppy / Junior' },
-        { value: 'adult', label: '🐕 Adulto' },
-        { value: 'senior', label: '🐕‍🦺 Sénior (7+)' }
+        { value: 'puppy', label: 'ðŸ¶ Puppy / Junior' },
+        { value: 'adult', label: 'ðŸ• Adulto' },
+        { value: 'senior', label: 'ðŸ•â€ðŸ¦º SÃ©nior (7+)' }
     ];
 
     var KIBBLE_PROTEINS = [
-        { value: 'chicken', label: '🍗 Frango' },
-        { value: 'lamb', label: '🐑 Borrego' },
-        { value: 'beef', label: '🥩 Vaca' },
-        { value: 'duck', label: '🦆 Pato' },
-        { value: 'salmon', label: '🐟 Salmão' },
-        { value: 'fish', label: '🐠 Peixe' },
-        { value: 'turkey', label: '🦃 Peru' },
-        { value: 'pork', label: '🐷 Porco' },
-        { value: 'venison', label: '🦌 Veado' },
-        { value: 'rabbit', label: '🐇 Coelho' },
-        { value: 'mixed', label: '🍖 Misto' }
+        { value: 'chicken', label: 'ðŸ— Frango' },
+        { value: 'lamb', label: 'ðŸ‘ Borrego' },
+        { value: 'beef', label: 'ðŸ¥© Vaca' },
+        { value: 'duck', label: 'ðŸ¦† Pato' },
+        { value: 'salmon', label: 'ðŸŸ SalmÃ£o' },
+        { value: 'fish', label: 'ðŸ  Peixe' },
+        { value: 'turkey', label: 'ðŸ¦ƒ Peru' },
+        { value: 'pork', label: 'ðŸ· Porco' },
+        { value: 'venison', label: 'ðŸ¦Œ Veado' },
+        { value: 'rabbit', label: 'ðŸ‡ Coelho' },
+        { value: 'mixed', label: 'ðŸ– Misto' }
     ];
 
     var KIBBLE_SPECIAL = [
         { value: 'none', label: 'Nenhuma' },
-        { value: 'sterilized', label: '✂️ Esterilizado / Castrado' },
-        { value: 'hypoallergenic', label: '🤧 Hipoalergénico' },
-        { value: 'sensitive', label: '🫄 Digestão sensível' },
-        { value: 'light', label: '⚖️ Light / Controlo de peso' },
-        { value: 'grain_free', label: '🌾 Grain Free' },
-        { value: 'dermatology', label: '🧴 Dermatológico' },
-        { value: 'renal', label: '💧 Renal' },
-        { value: 'joint', label: '🦴 Articulações' }
+        { value: 'sterilized', label: 'âœ‚ï¸ Esterilizado / Castrado' },
+        { value: 'hypoallergenic', label: 'ðŸ¤§ HipoalergÃ©nico' },
+        { value: 'sensitive', label: 'ðŸ«„ DigestÃ£o sensÃ­vel' },
+        { value: 'light', label: 'âš–ï¸ Light / Controlo de peso' },
+        { value: 'grain_free', label: 'ðŸŒ¾ Grain Free' },
+        { value: 'dermatology', label: 'ðŸ§´ DermatolÃ³gico' },
+        { value: 'renal', label: 'ðŸ’§ Renal' },
+        { value: 'joint', label: 'ðŸ¦´ ArticulaÃ§Ãµes' }
     ];
 
-    const FIREBASE_CONFIG = {
-        apiKey: "AIzaSyCiuXz2z5ShCOOkzXmIMTm0i99Dae8IRaA",
-        authDomain: "melucafeeder.firebaseapp.com",
-        databaseURL: "https://melucafeeder-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "melucafeeder",
-        storageBucket: "melucafeeder.firebasestorage.app",
-        messagingSenderId: "314126208675",
-        appId: "1:314126208675:web:424edf29c499aa168db916"
-    };
-
-    let db = null;
-    let currentUser = null;
-    let currentDogId = null;
+    var db = null;
+    var currentUser = null;
+    var currentDogId = null;
 
     try {
         if (!firebase.apps.length) {
@@ -119,162 +85,51 @@
         console.error('Firebase init error in settings:', e);
     }
 
-    const loginSection = document.getElementById('loginSection');
-    const profilePanel = document.getElementById('profilePanel');
-    const alertPanel = document.getElementById('alertPanel');
-    const telegramPanel = document.getElementById('telegramPanel');
-    const recipePanel = document.getElementById('recipePanel');
-    const feedingPanel = document.getElementById('feedingPanel');
-    const kibblePanel = document.getElementById('kibblePanel');
-    const weightPanel = document.getElementById('weightPanel');
-    const invitePanel = document.getElementById('invitePanel');
-    const actionsPanel = document.getElementById('actionsPanel');
-    const dogNameSubtitle = document.getElementById('dogNameSubtitle');
-    const saveSettingsBtn = document.getElementById('saveSettings');
-    const testNotificationBtn = document.getElementById('testNotification');
-    const generateInviteBtn = document.getElementById('generateInvite');
-    const inviteResultEl = document.getElementById('inviteResult');
-    const membersListEl = document.getElementById('membersList');
-    const toastEl = document.getElementById('toast');
+    var loginSection = document.getElementById('loginSection');
+    var profilePanel = document.getElementById('profilePanel');
+    var alertPanel = document.getElementById('alertPanel');
+    var telegramPanel = document.getElementById('telegramPanel');
+    var recipePanel = document.getElementById('recipePanel');
+    var feedingPanel = document.getElementById('feedingPanel');
+    var kibblePanel = document.getElementById('kibblePanel');
+    var weightPanel = document.getElementById('weightPanel');
+    var invitePanel = document.getElementById('invitePanel');
+    var actionsPanel = document.getElementById('actionsPanel');
+    var dogNameSubtitle = document.getElementById('dogNameSubtitle');
+    var saveSettingsBtn = document.getElementById('saveSettings');
+    var testNotificationBtn = document.getElementById('testNotification');
+    var generateInviteBtn = document.getElementById('generateInvite');
+    var inviteResultEl = document.getElementById('inviteResult');
+    var membersListEl = document.getElementById('membersList');
+    var toastEl = document.getElementById('toast');
 
-    const profileNameEl = document.getElementById('profileName');
-    const profileBreedEl = document.getElementById('profileBreed');
-    const profileBreedBtnEl = document.getElementById('profileBreedBtn');
-    const profileBirthdayEl = document.getElementById('profileBirthday');
-    const profileBirthdayBtnEl = document.getElementById('profileBirthdayBtn');
-    const profileColorEl = document.getElementById('profileColor');
-    const profileNeuteredEl = document.getElementById('profileNeutered');
-    const profileChipEl = document.getElementById('profileChip');
-    const shareDurationBtnEl = document.getElementById('shareDurationBtn');
+    var profileNameEl = document.getElementById('profileName');
+    var profileBreedEl = document.getElementById('profileBreed');
+    var profileBreedBtnEl = document.getElementById('profileBreedBtn');
+    var profileBirthdayEl = document.getElementById('profileBirthday');
+    var profileBirthdayBtnEl = document.getElementById('profileBirthdayBtn');
+    var profileColorEl = document.getElementById('profileColor');
+    var profileNeuteredEl = document.getElementById('profileNeutered');
+    var profileChipEl = document.getElementById('profileChip');
+    var shareDurationBtnEl = document.getElementById('shareDurationBtn');
 
-    // Avatar elements
-    var DOG_ICONS = ['🐕', '🐶', '🐩', '🦮', '🐕‍🦺', '🐾', '🐺', '🦊', '🐻', '🐼', '🦁', '🐯', '🐗', '🐴', '🦄', '🐰', '🐱', '🐈'];
-
-    function initAvatarPicker(prefix) {
-        var preview = document.getElementById(prefix + 'AvatarPreview');
-        var iconEl = document.getElementById(prefix + 'AvatarIcon');
-        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
-        var typeEl = document.getElementById(prefix + 'AvatarType');
-        var valueEl = document.getElementById(prefix + 'AvatarValue');
-        var fileEl = document.getElementById(prefix + 'AvatarFile');
-        var optionsEl = document.getElementById(prefix + 'AvatarOptions');
-        var gridEl = document.getElementById(prefix + 'AvatarGrid');
-        var photoBtnEl = document.getElementById(prefix + 'AvatarPhotoBtn');
-        if (!preview) return;
-
-        gridEl.innerHTML = DOG_ICONS.map(function (icon) {
-            var sel = icon === valueEl.value ? ' selected' : '';
-            return '<button type="button" class="avatar-icon-option' + sel + '" data-icon="' + icon + '">' + icon + '</button>';
-        }).join('');
-
-        preview.addEventListener('click', function () {
-            optionsEl.style.display = optionsEl.style.display === 'none' ? '' : 'none';
-        });
-
-        gridEl.addEventListener('click', function (e) {
-            var btn = e.target.closest('.avatar-icon-option');
-            if (!btn) return;
-            var icon = btn.getAttribute('data-icon');
-            typeEl.value = 'icon';
-            valueEl.value = icon;
-            iconEl.textContent = icon;
-            iconEl.style.display = '';
-            photoEl.style.display = 'none';
-            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
-            btn.classList.add('selected');
-            optionsEl.style.display = 'none';
-        });
-
-        photoBtnEl.addEventListener('click', function () { fileEl.click(); });
-
-        fileEl.addEventListener('change', function () {
-            var file = fileEl.files[0];
-            if (!file) return;
-            compressPhoto(file, function (dataUrl) {
-                typeEl.value = 'photo';
-                valueEl.value = dataUrl;
-                photoEl.src = dataUrl;
-                photoEl.style.display = '';
-                iconEl.style.display = 'none';
-                optionsEl.style.display = 'none';
-                gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) { b.classList.remove('selected'); });
-            });
-            fileEl.value = '';
-        });
-    }
-
-    function compressPhoto(file, callback) {
-        var reader = new FileReader();
-        reader.onload = function (e) {
-            var img = new Image();
-            img.onload = function () {
-                var canvas = document.createElement('canvas');
-                var size = 64;
-                canvas.width = size;
-                canvas.height = size;
-                var ctx = canvas.getContext('2d');
-                var sx = 0, sy = 0, sw = img.width, sh = img.height;
-                if (sw > sh) { sx = (sw - sh) / 2; sw = sh; }
-                else { sy = (sh - sw) / 2; sh = sw; }
-                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
-                callback(canvas.toDataURL('image/jpeg', 0.5));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    function setAvatarPreview(prefix, avatar) {
-        var iconEl = document.getElementById(prefix + 'AvatarIcon');
-        var photoEl = document.getElementById(prefix + 'AvatarPhoto');
-        var typeEl = document.getElementById(prefix + 'AvatarType');
-        var valueEl = document.getElementById(prefix + 'AvatarValue');
-        if (!iconEl) return;
-        var a = avatar || { type: 'icon', value: '🐕' };
-        typeEl.value = a.type;
-        valueEl.value = a.value;
-        if (a.type === 'photo') {
-            photoEl.src = a.value;
-            photoEl.style.display = '';
-            iconEl.style.display = 'none';
-        } else {
-            iconEl.textContent = a.value || '🐕';
-            iconEl.style.display = '';
-            photoEl.style.display = 'none';
-        }
-        var gridEl = document.getElementById(prefix + 'AvatarGrid');
-        if (gridEl) {
-            gridEl.querySelectorAll('.avatar-icon-option').forEach(function (b) {
-                if (a.type === 'icon' && b.getAttribute('data-icon') === a.value) b.classList.add('selected');
-                else b.classList.remove('selected');
-            });
-        }
-    }
-
-    function getAvatarFromPicker(prefix) {
-        var typeEl = document.getElementById(prefix + 'AvatarType');
-        var valueEl = document.getElementById(prefix + 'AvatarValue');
-        if (!typeEl) return { type: 'icon', value: '🐕' };
-        return { type: typeEl.value, value: valueEl.value };
-    }
-
-    const alertThresholdEl = document.getElementById('alertThreshold');
-    const telegramTokenEl = document.getElementById('telegramToken');
-    const telegramChatIdEl = document.getElementById('telegramChatId');
-    const recipeIngredientsEl = document.getElementById('recipeIngredients');
-    const addIngredientBtnEl = document.getElementById('addIngredientBtn');
-    const kibbleBrandEl = document.getElementById('kibbleBrand');
-    const kibbleBrandBtnEl = document.getElementById('kibbleBrandBtn');
-    const kibbleLifeStageEl = document.getElementById('kibbleLifeStage');
-    const kibbleLifeStageBtnEl = document.getElementById('kibbleLifeStageBtn');
-    const kibbleProteinEl = document.getElementById('kibbleProtein');
-    const kibbleProteinBtnEl = document.getElementById('kibbleProteinBtn');
-    const kibbleSpecialEl = document.getElementById('kibbleSpecial');
-    const kibbleSpecialBtnEl = document.getElementById('kibbleSpecialBtn');
-    const kibbleAmountEl = document.getElementById('kibbleAmount');
-    const kibbleMealsEl = document.getElementById('kibbleMeals');
-    const kibbleBagSizeEl = document.getElementById('kibbleBagSize');
-    const targetWeightEl = document.getElementById('targetWeight');
+    var alertThresholdEl = document.getElementById('alertThreshold');
+    var telegramTokenEl = document.getElementById('telegramToken');
+    var telegramChatIdEl = document.getElementById('telegramChatId');
+    var recipeIngredientsEl = document.getElementById('recipeIngredients');
+    var addIngredientBtnEl = document.getElementById('addIngredientBtn');
+    var kibbleBrandEl = document.getElementById('kibbleBrand');
+    var kibbleBrandBtnEl = document.getElementById('kibbleBrandBtn');
+    var kibbleLifeStageEl = document.getElementById('kibbleLifeStage');
+    var kibbleLifeStageBtnEl = document.getElementById('kibbleLifeStageBtn');
+    var kibbleProteinEl = document.getElementById('kibbleProtein');
+    var kibbleProteinBtnEl = document.getElementById('kibbleProteinBtn');
+    var kibbleSpecialEl = document.getElementById('kibbleSpecial');
+    var kibbleSpecialBtnEl = document.getElementById('kibbleSpecialBtn');
+    var kibbleAmountEl = document.getElementById('kibbleAmount');
+    var kibbleMealsEl = document.getElementById('kibbleMeals');
+    var kibbleBagSizeEl = document.getElementById('kibbleBagSize');
+    var targetWeightEl = document.getElementById('targetWeight');
 
     var currentFeedingMode = 'homemade';
 
@@ -286,8 +141,8 @@
             if (currentDogId) {
                 showSettings();
             } else {
-                dogNameSubtitle.textContent = 'Nenhum cão seleccionado';
-                showToast('Volta à app principal para seleccionar um cão');
+                dogNameSubtitle.textContent = 'Nenhum cÃ£o seleccionado';
+                showToast('Volta Ã  app principal para seleccionar um cÃ£o');
             }
         } else {
             // Not logged in
@@ -312,7 +167,7 @@
         // Load dog name + profile
         db.ref('dogs/' + currentDogId).once('value', function (snap) {
             var dog = snap.val() || {};
-            dogNameSubtitle.textContent = dog.name || 'Configurações do cão';
+            dogNameSubtitle.textContent = dog.name || 'ConfiguraÃ§Ãµes do cÃ£o';
             populateProfile(dog.name, dog.profile || {});
         });
 
@@ -382,12 +237,7 @@
         return arr.length > 0 ? arr : [{ id: 'chicken', amount: 50 }, { id: 'rice', amount: 50 }, { id: 'peas', amount: 25 }, { id: 'egg', amount: 0.5 }];
     }
 
-    function getIngredient(id) {
-        for (var i = 0; i < INGREDIENT_POOL.length; i++) {
-            if (INGREDIENT_POOL[i].id === id) return INGREDIENT_POOL[i];
-        }
-        return { id: id, name: id, icon: '📦', unit: 'g' };
-    }
+    var getIngredient = MelucaShared.getIngredient;
 
     function renderRecipeIngredients() {
         if (currentRecipe.length === 0) {
@@ -402,7 +252,7 @@
                 '<span class="recipe-ing-name">' + escapeHtml(ing.name) + '</span>' +
                 '<input type="number" class="recipe-ing-amount" data-idx="' + idx + '" min="0" step="' + step + '" value="' + item.amount + '">' +
                 '<span class="recipe-ing-unit">' + ing.unit + '</span>' +
-                '<button class="recipe-ing-remove" data-idx="' + idx + '">✕</button>' +
+                '<button class="recipe-ing-remove" data-idx="' + idx + '">âœ•</button>' +
                 '</div>';
         }).join('');
 
@@ -429,7 +279,7 @@
             profileBreedBtnEl.textContent = p.breed;
             profileBreedBtnEl.classList.add('has-value');
         } else {
-            profileBreedBtnEl.textContent = 'Seleccionar raça';
+            profileBreedBtnEl.textContent = 'Seleccionar raÃ§a';
             profileBreedBtnEl.classList.remove('has-value');
         }
         profileBirthdayEl.value = p.birthday || '';
@@ -466,7 +316,7 @@
         // Save profile
         var profileSexRadio = document.querySelector('input[name="profileSex"]:checked');
         var profileUpdates = {};
-        profileUpdates['dogs/' + currentDogId + '/name'] = profileNameEl.value.trim() || 'Cão';
+        profileUpdates['dogs/' + currentDogId + '/name'] = profileNameEl.value.trim() || 'CÃ£o';
         profileUpdates['dogs/' + currentDogId + '/profile'] = {
             breed: profileBreedEl.value || '',
             sex: profileSexRadio ? profileSexRadio.value : '',
@@ -503,8 +353,8 @@
             db.ref().update(profileUpdates);
         }
 
-        dogNameSubtitle.textContent = profileNameEl.value.trim() || 'Cão';
-        showToast('Configurações guardadas');
+        dogNameSubtitle.textContent = profileNameEl.value.trim() || 'CÃ£o';
+        showToast('ConfiguraÃ§Ãµes guardadas');
     }
 
     function handleGenerateInvite() {
@@ -518,7 +368,7 @@
         db.ref('invites/' + code).set(invite).then(function () {
             inviteResultEl.textContent = code;
             inviteResultEl.classList.add('visible');
-            showToast('Código gerado: ' + code + ' (expira em 24h)');
+            showToast('CÃ³digo gerado: ' + code + ' (expira em 24h)');
         });
     }
 
@@ -541,7 +391,7 @@
 
             Object.keys(members).forEach(function (uid) {
                 var m = members[uid];
-                var roleLabel = m.role === 'owner' ? '👑 Owner' : '👤 Membro';
+                var roleLabel = m.role === 'owner' ? 'ðŸ‘‘ Owner' : 'ðŸ‘¤ Membro';
 
                 var row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)';
@@ -566,7 +416,7 @@
     }
 
     function handleRemoveMember(uid, name) {
-        showSettingsModal('Queres remover "' + name + '" deste cão?', function () {
+        showSettingsModal('Queres remover "' + name + '" deste cÃ£o?', function () {
             var updates = {};
             updates['dogs/' + currentDogId + '/members/' + uid] = null;
             updates['users/' + uid + '/dogs/' + currentDogId] = null;
@@ -634,7 +484,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: chatIds[i],
-                        text: '🧪 Teste MelucaFeeder: Notificações a funcionar!',
+                        text: 'ðŸ§ª Teste MelucaFeeder: NotificaÃ§Ãµes a funcionar!',
                         parse_mode: 'HTML'
                     })
                 });
@@ -643,11 +493,11 @@
         }
 
         if (success === chatIds.length) {
-            showToast('Notificação enviada para ' + success + ' destinatário(s)!');
+            showToast('NotificaÃ§Ã£o enviada para ' + success + ' destinatÃ¡rio(s)!');
         } else if (success > 0) {
-            showToast('Enviada para ' + success + '/' + chatIds.length + ' destinatários');
+            showToast('Enviada para ' + success + '/' + chatIds.length + ' destinatÃ¡rios');
         } else {
-            showToast('Erro ao enviar notificação');
+            showToast('Erro ao enviar notificaÃ§Ã£o');
         }
     }
 
@@ -760,16 +610,16 @@
 
     // === Custom Dropdown ===
     var BREED_OPTIONS = [
-        'Sem raça definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
-        'Bichon Frisé', 'Border Collie', 'Boxer', 'Braco Alemão', 'Bulldog Francês',
-        'Bulldog Inglês', 'Bull Terrier', 'Caniche', 'Cão de Água Português',
-        'Cão de Castro Laboreiro', 'Cão da Serra da Estrela', 'Cão de Fila de São Miguel',
-        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'Dálmata',
+        'Sem raÃ§a definida', 'Akita Inu', 'Australian Shepherd', 'Basset Hound', 'Beagle',
+        'Bichon FrisÃ©', 'Border Collie', 'Boxer', 'Braco AlemÃ£o', 'Bulldog FrancÃªs',
+        'Bulldog InglÃªs', 'Bull Terrier', 'Caniche', 'CÃ£o de Ãgua PortuguÃªs',
+        'CÃ£o de Castro Laboreiro', 'CÃ£o da Serra da Estrela', 'CÃ£o de Fila de SÃ£o Miguel',
+        'Cavalier King Charles', 'Chihuahua', 'Cocker Spaniel', 'Dachshund', 'DÃ¡lmata',
         'Dobermann', 'Golden Retriever', 'Husky Siberiano', 'Jack Russell Terrier',
-        'Labrador Retriever', 'Lulu da Pomerânia', 'Malinois', 'Maltês', 'Pastor Alemão',
-        'Pequinês', 'Perdigueiro Português', 'Pincher Miniatura', 'Pitbull',
-        'Podengo Português', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
-        'São Bernardo', 'Schnauzer', 'Setter Irlandês', 'Shar Pei', 'Shiba Inu',
+        'Labrador Retriever', 'Lulu da PomerÃ¢nia', 'Malinois', 'MaltÃªs', 'Pastor AlemÃ£o',
+        'PequinÃªs', 'Perdigueiro PortuguÃªs', 'Pincher Miniatura', 'Pitbull',
+        'Podengo PortuguÃªs', 'Rafeiro do Alentejo', 'Rottweiler', 'Samoiedo',
+        'SÃ£o Bernardo', 'Schnauzer', 'Setter IrlandÃªs', 'Shar Pei', 'Shiba Inu',
         'Shih Tzu', 'Springer Spaniel', 'Staffordshire Bull Terrier', 'Weimaraner',
         'West Highland Terrier', 'Whippet', 'Yorkshire Terrier', 'Outro'
     ];
@@ -858,7 +708,7 @@
         overlay.style.display = '';
 
         function renderMonth() {
-            var monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            var monthNames = ['Janeiro', 'Fevereiro', 'MarÃ§o', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
             label.textContent = monthNames[viewMonth] + ' ' + viewYear;
 
             var firstDay = new Date(viewYear, viewMonth, 1);
@@ -949,7 +799,7 @@
         var usedIds = currentRecipe.map(function (item) { return item.id; });
         var available = INGREDIENT_POOL.filter(function (ing) { return usedIds.indexOf(ing.id) === -1; });
         if (available.length === 0) {
-            showToast('Todos os ingredientes já foram adicionados');
+            showToast('Todos os ingredientes jÃ¡ foram adicionados');
             return;
         }
         var options = available.map(function (ing) { return { value: ing.id, label: ing.icon + ' ' + ing.name }; });
@@ -971,7 +821,7 @@
     });
 
     profileBreedBtnEl.addEventListener('click', function () {
-        showDropdown('Raça', BREED_OPTIONS, profileBreedEl.value, function (value) {
+        showDropdown('RaÃ§a', BREED_OPTIONS, profileBreedEl.value, function (value) {
             profileBreedEl.value = value;
             profileBreedBtnEl.textContent = value;
             profileBreedBtnEl.classList.add('has-value');
@@ -995,7 +845,7 @@
 
     // Kibble dropdowns
     kibbleBrandBtnEl.addEventListener('click', function () {
-        showDropdown('Marca de Ração', KIBBLE_BRANDS, kibbleBrandEl.value, function (value, label) {
+        showDropdown('Marca de RaÃ§Ã£o', KIBBLE_BRANDS, kibbleBrandEl.value, function (value, label) {
             kibbleBrandEl.value = value;
             kibbleBrandBtnEl.textContent = label;
             kibbleBrandBtnEl.classList.add('has-value');
@@ -1011,7 +861,7 @@
     });
 
     kibbleProteinBtnEl.addEventListener('click', function () {
-        showDropdown('Proteína Principal', KIBBLE_PROTEINS, kibbleProteinEl.value, function (value, label) {
+        showDropdown('ProteÃ­na Principal', KIBBLE_PROTEINS, kibbleProteinEl.value, function (value, label) {
             kibbleProteinEl.value = value;
             kibbleProteinBtnEl.textContent = label;
             kibbleProteinBtnEl.classList.add('has-value');
