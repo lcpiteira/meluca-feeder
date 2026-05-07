@@ -157,6 +157,9 @@ body {
     padding: 24px 16px;
     max-width: 500px;
     margin: 0 auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .dogs-container {
@@ -264,8 +267,9 @@ body {
     background: var(--card);
     border: 1px solid var(--card-border);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: 20px 16px;
     box-shadow: var(--shadow);
+    overflow: hidden;
 }
 
 .dogs-create h3,
@@ -278,10 +282,18 @@ body {
 .dogs-create-row {
     display: flex;
     gap: 10px;
+    align-items: stretch;
+    width: 100%;
 }
 
 .dogs-create-row .vet-input {
     flex: 1;
+    min-width: 0;
+}
+
+.dogs-create-row .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 /* Dog form */
@@ -306,10 +318,12 @@ body {
 .dog-form-half {
     flex-direction: row;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .dog-form-half > div {
     flex: 1;
+    min-width: 120px;
 }
 
 .dog-form-label {
@@ -322,6 +336,9 @@ body {
 .dog-form-radio-group {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
 }
 
 .dog-radio-label {
@@ -330,8 +347,9 @@ body {
     justify-content: center;
     gap: 6px;
     flex: 1;
-    padding: 10px 14px;
-    font-size: 0.9rem;
+    min-width: 0;
+    padding: 10px 10px;
+    font-size: 0.85rem;
     color: var(--text-muted);
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -340,6 +358,7 @@ body {
     transition: border-color 0.2s, background 0.2s, color 0.2s;
     user-select: none;
     -webkit-user-select: none;
+    white-space: nowrap;
 }
 
 .dog-radio-label:hover {
@@ -364,8 +383,8 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 14px;
-    font-size: 0.9rem;
+    padding: 10px 10px;
+    font-size: 0.85rem;
     color: var(--text-muted);
     background: var(--bg-surface);
     border: 1px solid var(--border);
@@ -375,6 +394,7 @@ body {
     user-select: none;
     -webkit-user-select: none;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .dog-checkbox-label:hover {
