@@ -18,7 +18,7 @@
     const EVENING_HOUR = 21;
     const MAX_AUTO_DEDUCTIONS = 4;
     const GEMINI_API_KEY = 'AIzaSyDOsZbgMdjY9gLjG-KIiOSye4lygDURLXU';
-    const GEMINI_MODEL = 'gemini-1.5-flash';
+    const GEMINI_MODEL = 'gemini-2.0-flash';
 
     var INGREDIENT_POOL = [
         { id: 'chicken', name: 'Frango', icon: '🍗', unit: 'g' },
