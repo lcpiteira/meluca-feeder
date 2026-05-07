@@ -383,11 +383,7 @@
                     '<button class="btn-delete-dog" title="Remover cão">🗑️</button>' +
                     '<span class="dog-card-arrow">›</span></div>';
 
-                card.querySelector('.dog-card-arrow').addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    selectDog(id);
-                });
-                card.querySelector('.dog-card-info').addEventListener('click', function () {
+                card.addEventListener('click', function () {
                     selectDog(id);
                 });
                 card.querySelector('.btn-delete-dog').addEventListener('click', function (e) {
